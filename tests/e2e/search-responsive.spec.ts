@@ -3,13 +3,15 @@ import { test, expect } from "@playwright/test";
 
 test("navigation and search controls have no duplicate entries", async ({
   page,
-}) => {
+}, testInfo) => {
   await page.goto("/jobs?workType=Remote&location=Europe");
-  const navigation = page.getByRole("navigation", { name: "Main navigation" });
-  await expect(navigation.getByRole("link")).toHaveText([
-    "Find Jobs",
-    "Companies",
-  ]);
+  const mobile = testInfo.project.name.startsWith("mobile");
+  const navigation = page.getByRole("navigation", {
+    name: mobile ? "Mobile navigation" : "Main navigation",
+  });
+  await expect(navigation.getByRole("link")).toHaveText(
+    mobile ? ["Jobs", "Companies"] : ["Find Jobs", "Companies"],
+  );
   await expect(
     page.getByRole("combobox", { name: "Search location" }),
   ).toHaveCount(1);

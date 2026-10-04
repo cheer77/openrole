@@ -4,8 +4,7 @@ import { test, expect } from "@playwright/test";
 test("search, URL sharing, empty state and reset", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  await page.goto("/");
-  await expect(page).toHaveURL(/\/jobs$/);
+  await page.goto("/jobs");
   await expect(page.locator(".job-card")).toHaveCount(8);
   await page
     .getByRole("textbox", { name: "Job title, company, or keyword" })
@@ -247,7 +246,11 @@ test("companies navigation opens a working company search", async ({
 }, testInfo) => {
   await page.goto("/jobs");
   await page
-    .getByRole("navigation", { name: "Main navigation" })
+    .getByRole("navigation", {
+      name: testInfo.project.name.startsWith("mobile")
+        ? "Mobile navigation"
+        : "Main navigation",
+    })
     .getByRole("link", { name: "Companies", exact: true })
     .click();
   await expect(page.locator(".company-card")).toHaveCount(10);

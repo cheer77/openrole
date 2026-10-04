@@ -8,7 +8,7 @@ export function SiteHeader() {
   return (
     <header className="site-header">
       <div className="container header-inner">
-        <Link href="/jobs" className="brand" aria-label="Openrole home">
+        <Link href="/" className="brand" aria-label="Openrole home">
           <span className="brand-symbol">
             <Icon name="arrow" size={23} />
           </span>
@@ -102,7 +102,7 @@ export function SiteFooter() {
   return (
     <footer className="site-footer">
       <div className="container footer-inner">
-        <Link href="/jobs" className="footer-brand">
+        <Link href="/" className="footer-brand">
           openrole.
         </Link>
         <p>Tech careers, everywhere.</p>

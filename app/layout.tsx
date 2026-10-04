@@ -21,6 +21,7 @@ import "@/styles/components/footer.css";
 import "@/styles/pages/jobs.css";
 import "@/styles/pages/job-details.css";
 import "@/styles/pages/companies.css";
+import "@/styles/pages/home.css";
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,

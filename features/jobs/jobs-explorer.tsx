@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
+import { SearchBar } from '@/components/search-bar';
 import { Select } from '@/components/select';
 import { Icon } from '@/components/icon';
 import { JobCard } from './job-card';
@@ -13,7 +14,7 @@ import {
 	serializeFilters,
 	sortOptions,
 } from './filter-jobs';
-import { locations, workTypes, type Filters, type Job } from './types';
+import { type Filters, type Job } from './types';
 
 const quickFilters: {
 	label: string;
@@ -157,9 +158,9 @@ export function JobsExplorer({ jobs, now }: { jobs: Job[]; now: number }) {
 							companies. Your next move.
 						</p>
 					</div>
-					<form
-						ref={searchForm}
-						className='search-bar'
+					<SearchBar
+						formRef={searchForm}
+						initialValues={{ q: filters.q, location: filters.location, workType: filters.workType }}
 						onSubmit={(event) => {
 							event.preventDefault();
 							const data = new FormData(event.currentTarget);
@@ -168,52 +169,8 @@ export function JobsExplorer({ jobs, now }: { jobs: Job[]; now: number }) {
 								location: String(data.get('location') || ''),
 								workType: String(data.get('workType') || ''),
 							});
-						}}>
-						<label className='search-input'>
-							<Icon name='search' size={22} />
-							<span className='sr-only'>Job title, company, or keyword</span>
-							<input
-								key={filters.q}
-								name='q'
-								defaultValue={filters.q}
-								placeholder='Job title, company, or keyword'
-								maxLength={150}
-							/>
-						</label>
-						<label className='search-select'>
-							<Icon name='globe' size={19} />
-							<span className='sr-only'>Search location</span>
-							<Select
-								key={filters.location}
-								name='location'
-								aria-label='Search location'
-								defaultValue={filters.location}>
-								<option value=''>Anywhere</option>
-								{locations.map((value) => (
-									<option key={value}>{value}</option>
-								))}
-							</Select>
-							<Icon name='down' size={14} />
-						</label>
-						<label className='search-select search-work'>
-							<Icon name='briefcase' size={18} />
-							<span className='sr-only'>Search work arrangement</span>
-							<Select
-								key={filters.workType}
-								name='workType'
-								aria-label='Search work arrangement'
-								defaultValue={filters.workType}>
-								<option value=''>Any work type</option>
-								{workTypes.map((value) => (
-									<option key={value}>{value}</option>
-								))}
-							</Select>
-							<Icon name='down' size={14} />
-						</label>
-						<button className='primary-button search-button' type='submit'>
-							Search jobs <Icon name='arrow' size={18} />
-						</button>
-					</form>
+						}}
+					/>
 				</div>
 			</section>
 			<div className='category-bar'>
