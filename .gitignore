@@ -7,3 +7,6 @@ out/
 .DS_Store
 test-results/
 playwright-report/
+backend/dist/
+backend/src/generated/
+backend/sources.local.json

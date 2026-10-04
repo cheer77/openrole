@@ -1,0 +1,106 @@
+generator client {
+  provider = "prisma-client"
+  output = "../src/generated/prisma"
+  moduleFormat = "esm"
+  importFileExtension = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum SourceType {
+  GREENHOUSE
+  LEVER
+  ASHBY
+  MANUAL
+}
+
+enum JobStatus {
+  ACTIVE
+  CLOSED
+  HIDDEN
+}
+
+enum RemoteType {
+  REMOTE
+  HYBRID
+  ON_SITE
+  UNKNOWN
+}
+
+model Company {
+  id String @id @default(cuid())
+  name String
+  slug String @unique
+  logoUrl String?
+  website String?
+  careerUrl String?
+  country String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  sources Source[]
+  jobs Job[]
+}
+
+model Source {
+  id String @id @default(cuid())
+  name String
+  type SourceType
+  companyId String
+  company Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  sourceIdentifier String
+  enabled Boolean @default(false)
+  lastSyncAt DateTime?
+  lastSuccessfulSync DateTime?
+  lastError String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  jobs Job[]
+  @@unique([type, sourceIdentifier])
+}
+
+model Job {
+  id String @id @default(cuid())
+  externalId String
+  slug String @unique
+  title String
+  companyId String
+  company Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  sourceId String
+  source Source @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+  description String
+  shortDescription String
+  category String
+  location String
+  city String?
+  country String?
+  region String?
+  remoteType RemoteType @default(UNKNOWN)
+  employmentType String?
+  experienceLevel String?
+  salaryMin Float?
+  salaryMax Float?
+  currency String?
+  technologies String[] @default([])
+  sourceUrl String
+  applyUrl String
+  publishedAt DateTime?
+  firstSeenAt DateTime @default(now())
+  lastCheckedAt DateTime
+  sortDate DateTime
+  missingSince DateTime?
+  status JobStatus @default(ACTIVE)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([sourceId, externalId])
+  @@index([status, sortDate, id])
+  @@index([publishedAt])
+  @@index([category])
+  @@index([country])
+  @@index([region])
+  @@index([remoteType])
+  @@index([companyId])
+  @@index([currency, salaryMin])
+  @@index([technologies], type: Gin)
+}

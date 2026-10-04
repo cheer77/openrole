@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Stripe public board",
+    "type": "GREENHOUSE",
+    "sourceIdentifier": "stripe",
+    "enabled": false,
+    "company": {
+      "name": "Stripe",
+      "slug": "stripe",
+      "website": "https://stripe.com",
+      "careerUrl": "https://stripe.com/jobs"
+    }
+  },
+  {
+    "name": "Spotify public board",
+    "type": "LEVER",
+    "sourceIdentifier": "spotify",
+    "enabled": false,
+    "company": {
+      "name": "Spotify",
+      "slug": "spotify",
+      "website": "https://www.spotify.com",
+      "careerUrl": "https://jobs.lever.co/spotify"
+    }
+  },
+  {
+    "name": "Ashby public board",
+    "type": "ASHBY",
+    "sourceIdentifier": "Ashby",
+    "enabled": false,
+    "company": {
+      "name": "Ashby",
+      "slug": "ashby",
+      "website": "https://www.ashbyhq.com",
+      "careerUrl": "https://jobs.ashbyhq.com/Ashby"
+    }
+  }
+]
