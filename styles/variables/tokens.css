@@ -1,0 +1,19 @@
+:root {
+	--brand: #ff5252;
+	--brand-hover: #ec3d3d;
+	--brand-soft: #fff1f0;
+	--brand-border: #edc5c7;
+	--focus-ring: #a43640;
+	--text: #172035;
+	--text-secondary: #566176;
+	--background: #ffffff;
+	--surface: #ffffff;
+	--border: #dce1e9;
+	--border-strong: #bcc5d4;
+	--success: #177345;
+	--success-soft: #eaf7ee;
+	--radius: 12px;
+	--radius-control: 10px;
+	--space-unit: 4px;
+	--shadow-card: 0 8px 24px #19294f17;
+}

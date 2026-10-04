@@ -1,0 +1,43 @@
+.company-logo {
+  display: inline-flex;
+  width: 46px;
+  height: 46px;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 9px;
+  font-size: 27px;
+  font-weight: 750;
+  letter-spacing: -1px;
+  border: 1px solid #17203508;
+}
+.company-logo-large {
+  width: 54px;
+  height: 54px;
+  font-size: 31px;
+}
+@media (max-width: 1150px) {
+  .company-logo {
+    width: 42px;
+    height: 42px;
+  }
+}
+@media (max-width: 900px) {
+  .company-logo {
+    width: 46px;
+    height: 46px;
+  }
+}
+@media (max-width: 640px) {
+  .company-logo {
+    width: 40px;
+    height: 40px;
+    font-size: 25px;
+    border-radius: 7px;
+  }
+  .company-logo-large {
+    width: 48px;
+    height: 48px;
+    font-size: 29px;
+  }
+}

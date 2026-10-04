@@ -1,0 +1,18 @@
+.container {
+  width: 100%;
+  max-width: 1376px;
+  --container-gutter: 32px;
+  padding-inline: max(var(--container-gutter), env(safe-area-inset-left))
+    max(var(--container-gutter), env(safe-area-inset-right));
+  margin-inline: auto;
+}
+@media (max-width: 900px) {
+  .container {
+    --container-gutter: 24px;
+  }
+}
+@media (max-width: 640px) {
+  .container {
+    --container-gutter: 16px;
+  }
+}

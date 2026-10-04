@@ -1,0 +1,78 @@
+.demo-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #647087;
+  white-space: nowrap;
+}
+.tiny-dot {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  background: currentColor;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.work-badge {
+  background: #f0f2f6;
+  color: #526078;
+  padding: 3px 7px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 550;
+}
+.work-remote {
+  background: var(--brand-soft);
+  color: var(--brand-hover);
+}
+.tech-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.tech-tags > span {
+  background: #f4f5f8;
+  color: #515e75;
+  border: 1px solid #e7eaf0;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.2;
+  padding: 4px 7px;
+}
+.new-badge {
+  display: inline-block;
+  background: var(--success-soft);
+  color: var(--success);
+  border-radius: 4px;
+  padding: 3px 7px;
+  font-size: 11px;
+  font-weight: 650;
+}
+.remote-pill {
+  color: var(--brand);
+  background: var(--brand-soft);
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 550;
+  padding: 4px 8px;
+}
+@media (max-width: 640px) {
+  .demo-label {
+    font-size: 12px;
+  }
+  .work-badge {
+    font-size: 11px;
+  }
+  .tech-tags {
+    gap: 5px;
+  }
+  .tech-tags > span {
+    font-size: 11px;
+    padding: 4px 6px;
+  }
+  .new-badge {
+    font-size: 11px;
+    padding: 3px 5px;
+  }
+}
