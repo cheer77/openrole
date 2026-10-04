@@ -7,7 +7,14 @@ export function formatSalary(salary: Job["salary"]): string {
       currency: salary.currency,
       maximumFractionDigits: 0,
     }).format(amount);
-  return `${format(salary.min)}–${format(salary.max)}`;
+  if (salary.min === null)
+    return salary.max === null
+      ? "Salary not listed"
+      : `Up to ${format(salary.max)}`;
+  if (salary.max === null) return `From ${format(salary.min)}`;
+  return salary.min === salary.max
+    ? format(salary.min)
+    : `${format(salary.min)}–${format(salary.max)}`;
 }
 export function timeAgo(date: string, now: number): string {
   const minutes = Math.max(
@@ -19,8 +26,5 @@ export function timeAgo(date: string, now: number): string {
   return hours < 24 ? `${hours}h ago` : `${Math.floor(hours / 24)}d ago`;
 }
 export function locationLabel(job: Job): string {
-  if (job.location === "USA") return job.city ? `${job.city}, USA` : "USA only";
-  return job.city
-    ? `${job.city}${job.location === "Other" ? "" : `, ${job.location}`}`
-    : job.location;
+  return job.location;
 }

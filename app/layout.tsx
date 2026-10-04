@@ -35,7 +35,7 @@ export const metadata: Metadata = {
     template: "%s | Openrole",
   },
   description:
-    "Discover tech and digital jobs with clear location requirements. Search remote, hybrid, and on-site opportunities around the world. Phase 1 demo.",
+    "Discover tech and digital jobs with clear location requirements. Search remote, hybrid, and on-site opportunities around the world.",
   robots: { index: false, follow: false },
 };
 export default function RootLayout({

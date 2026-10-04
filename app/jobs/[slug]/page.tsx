@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getMockJobs } from "@/data/jobs";
+import { getJob } from "@/lib/api";
+import { ApplyLink } from "@/components/apply-link";
 import { CompanyLogo } from "@/components/company-logo";
 import { Icon } from "@/components/icon";
 import { formatSalary, locationLabel } from "@/lib/format";
@@ -13,7 +14,7 @@ type Props = {
 };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const job = getMockJobs().find((item) => item.slug === slug);
+  const job = await getJob(slug);
   return job
     ? {
         title: `${job.title} at ${job.company.name}`,
@@ -24,25 +25,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function JobDetails({ params, searchParams }: Props) {
   const { slug } = await params;
   const { from } = await searchParams;
-  const job = getMockJobs().find((item) => item.slug === slug);
+  const job = await getJob(slug);
   if (!job) notFound();
   const query =
     typeof from === "string"
       ? serializeFilters(parseFilters(new URLSearchParams(from))).toString()
       : "";
   const backHref = `/jobs${query ? `?${query}` : ""}`;
-  const apply = (
-    <a
-      className="primary-button apply-button"
-      href={job.applyUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-    >
-      Apply on company website <Icon name="external" size={17} />
-    </a>
-  );
+  const apply = <ApplyLink jobId={job.id} href={job.applyUrl} />;
   return (
-    <main id="main-content" className="container detail-page">
+    <main
+      id="main-content"
+      className="container detail-page"
+      data-job-id={job.id}
+    >
       <Link href={backHref} className="back-link">
         <Icon name="back" size={17} />
         Back to all jobs
@@ -56,7 +52,7 @@ export default async function JobDetails({ params, searchParams }: Props) {
                 <span className="detail-category">{job.category}</span>
                 <p>{job.company.name}</p>
               </div>
-              <span className="demo-label">Demo role</span>
+              <span className="demo-label">Company listing</span>
             </div>
             <h1>{job.title}</h1>
             <div className="detail-meta">
@@ -84,55 +80,27 @@ export default async function JobDetails({ params, searchParams }: Props) {
                 <h2>Is this role open to you?</h2>
                 <p>{job.eligibility}</p>
                 <small>
-                  Work authorization and visa sponsorship are not specified in
-                  this demo. Confirm with the employer.
+                  Confirm work authorization, visa sponsorship and location
+                  requirements with the employer.
                 </small>
               </div>
             </div>
             <section>
               <h2>About the role</h2>
+              {job.description.length === 0 && (
+                <p>Read the full description on the company website.</p>
+              )}
               {job.description.map((paragraph) => (
-                <p key={paragraph}>{paragraph}</p>
+                <p className="source-paragraph" key={paragraph}>
+                  {paragraph}
+                </p>
               ))}
-            </section>
-            <section>
-              <h2>What you’ll do</h2>
-              <ul>
-                {job.responsibilities.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            </section>
-            <section>
-              <h2>What you’ll bring</h2>
-              <ul>
-                {job.requirements.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            </section>
-            <section>
-              <h2>Nice to have</h2>
-              <ul>
-                {job.niceToHave.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            </section>
-            <section>
-              <h2>What’s in it for you</h2>
-              <ul>
-                {job.benefits.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
             </section>
             <section className="about-company">
               <h2>About {job.company.name}</h2>
-              <p>{job.company.description}</p>
               <a
                 className="inline-link"
-                href={job.company.website}
+                href={job.company.website || job.sourceUrl}
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -141,9 +109,11 @@ export default async function JobDetails({ params, searchParams }: Props) {
             </section>
             <div className="detail-published">
               <Icon name="clock" size={15} />
-              Published{" "}
-              <time dateTime={job.publishedAt}>
-                {new Date(job.publishedAt).toLocaleDateString("en-GB", {
+              {job.publishedAt ? "Published" : "First seen"}{" "}
+              <time dateTime={job.publishedAt || job.firstSeenAt}>
+                {new Date(
+                  job.publishedAt || job.firstSeenAt,
+                ).toLocaleDateString("en-GB", {
                   day: "numeric",
                   month: "long",
                   year: "numeric",
@@ -193,8 +163,8 @@ export default async function JobDetails({ params, searchParams }: Props) {
           <div className="detail-demo">
             <Icon name="sparkle" size={18} />
             <p>
-              This is a demonstration listing, not a verified open position.
-              Role details, salaries, and benefits are illustrative.
+              Details are supplied by the employer. Check the original listing
+              before applying.
             </p>
           </div>
         </aside>

@@ -65,3 +65,36 @@
     font-size: 12px;
   }
 }
+
+/* Shared loading state for API-backed routes and result transitions. */
+.skeleton-card {
+  min-height: 180px;
+  display: grid;
+  align-content: center;
+  gap: 18px;
+}
+.skeleton-line {
+  display: block;
+  height: 14px;
+  width: 80%;
+  border-radius: 6px;
+  background: var(--border);
+  animation: skeleton-pulse 1.4s ease-in-out infinite alternate;
+}
+.skeleton-title {
+  width: 55%;
+  height: 23px;
+}
+.skeleton-short {
+  width: 35%;
+}
+@keyframes skeleton-pulse {
+  to {
+    opacity: 0.4;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-line {
+    animation: none;
+  }
+}

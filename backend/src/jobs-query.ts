@@ -1,3 +1,4 @@
+import { locationWhere } from "./location-query.js";
 import { z } from "zod";
 import type { Prisma } from "./generated/prisma/client.js";
 
@@ -5,6 +6,18 @@ export const jobsQuerySchema = z
   .object({
     search: z.string().trim().max(150).optional(),
     category: z.string().trim().max(80).optional(),
+    location: z
+      .enum([
+        "Worldwide",
+        "Europe",
+        "EU",
+        "Spain",
+        "Germany",
+        "UK",
+        "USA",
+        "Other",
+      ])
+      .optional(),
     country: z.string().trim().min(2).max(80).optional(),
     region: z.string().trim().min(1).max(80).optional(),
     remoteType: z.enum(["REMOTE", "HYBRID", "ON_SITE", "UNKNOWN"]).optional(),
@@ -60,6 +73,7 @@ export function jobsQuery(input: unknown, now = new Date()) {
       ],
     });
   }
+  if (query.location) AND.push(locationWhere(query.location));
   if (query.salaryMin !== undefined)
     AND.push({
       OR: [

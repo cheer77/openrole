@@ -491,3 +491,7 @@
 		gap: 6px;
 	}
 }
+
+.home-job-card {
+	overflow-wrap: anywhere;
+}

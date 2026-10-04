@@ -103,7 +103,7 @@ export function SiteFooter() {
         <nav aria-label="Footer navigation">
           <Link href="/jobs">Find Jobs</Link>
           <Link href="/companies">Companies</Link>
-          <span>Demo experience</span>
+          <span>Discover your next role</span>
         </nav>
       </div>
     </footer>

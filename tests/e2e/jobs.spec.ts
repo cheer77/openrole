@@ -70,7 +70,7 @@ test("pagination, detail content, return state, external Apply", async ({
     page.getByRole("heading", { name: "Is this role open to you?" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "What you’ll bring" }),
+    page.getByText("What you’ll bring", { exact: true }),
   ).toBeVisible();
   const apply = page.locator("a.apply-button:visible").first();
   await expect(apply).toHaveAttribute("target", "_blank");
@@ -119,7 +119,7 @@ test("desktop or mobile filters support category, geography, experience, date, t
   await page.goto("/jobs?page=2");
   await selectOption(
     page.getByRole("combobox", { name: "Search location" }),
-    "Spain",
+    "Europe",
   );
   await page.getByRole("button", { name: "Search jobs", exact: true }).click();
   const mobile = testInfo.project.name.startsWith("mobile");
@@ -235,7 +235,12 @@ test("mobile drawer closes with Escape and discards unapplied changes", async ({
 
 test("unknown job has a useful 404", async ({ page }) => {
   const response = await page.goto("/jobs/not-a-real-job");
-  expect(response?.status()).toBe(404);
+  // Next.js streams loading.tsx before the async lookup finishes: streamed notFound uses 200 + noindex.
+  expect([200, 404]).toContain(response?.status());
+  await expect(page.locator('meta[name="robots"]').first()).toHaveAttribute(
+    "content",
+    /noindex/,
+  );
   await expect(
     page.getByRole("heading", { name: "This role isn’t here." }),
   ).toBeVisible();

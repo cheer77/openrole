@@ -413,3 +413,11 @@
     font-size: 25px;
   }
 }
+
+.source-paragraph {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.detail-page {
+  overflow-wrap: anywhere;
+}

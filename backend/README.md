@@ -1,6 +1,6 @@
 # Openrole backend — Phase 2
 
-NestJS 12 (ESM), PostgreSQL 17, Prisma 7, Redis 7, BullMQ. Backend — отдельный npm-пакет; frontend пока использует mock-data. Интеграция frontend начинается только после `START PHASE 3`. Пользовательская авторизация, OAuth, кабинеты и admin API в Phase 2 не входят.
+NestJS 12 (ESM), PostgreSQL 17, Prisma 7, Redis 7, BullMQ. Backend — отдельный npm-пакет. В Phase 3 frontend подключён к API через сервер Next.js (`API_URL`); mock-данные используются только в изолированных тестах. Пользовательская авторизация, OAuth, кабинеты и admin API пока не реализованы.
 
 ## Быстрый запуск
 
@@ -59,6 +59,7 @@ npm run sync
 | --- | --- |
 | `search` | до 150 символов, все слова должны встретиться в title/company/description |
 | `category` | категория, сравнение без учёта регистра |
+| `location` | Worldwide, Europe, EU, Spain, Germany, UK, USA, Other; явные country/region/location, без вывода страны по городу или Worldwide из remote |
 | `country`, `region` | точное значение без учёта регистра; страна при наличии нормализуется (например ES, US) |
 | `remoteType` | REMOTE, HYBRID, ON_SITE, UNKNOWN |
 | `experience` | Junior, Middle, Senior, Lead |

@@ -13,10 +13,10 @@ export function JobCard({
   now: number;
   returnQuery?: string;
 }) {
-  const fresh = now - new Date(job.publishedAt).getTime() < 86400000;
+  const fresh = now - new Date(job.publishedAt || job.firstSeenAt).getTime() < 86400000;
   const href = `/jobs/${job.slug}${returnQuery ? `?from=${encodeURIComponent(returnQuery)}` : ""}`;
   return (
-    <article className="job-card">
+    <article className="job-card" data-job-id={job.id}>
       <div className="job-card-top">
         <CompanyLogo company={job.company} />
         <div className="job-card-heading">
@@ -63,9 +63,9 @@ export function JobCard({
         </div>
         <div className="posted-info">
           {fresh && <span className="new-badge">New today</span>}
-          <time dateTime={job.publishedAt}>
+          <time dateTime={job.publishedAt || job.firstSeenAt}>
             <Icon name="clock" size={13} />
-            {timeAgo(job.publishedAt, now)}
+            {!job.publishedAt && "Added "}{timeAgo(job.publishedAt || job.firstSeenAt, now)}
           </time>
         </div>
         <Link

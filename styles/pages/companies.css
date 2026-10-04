@@ -109,3 +109,7 @@
     padding: 21px;
   }
 }
+
+.company-card {
+  overflow-wrap: anywhere;
+}

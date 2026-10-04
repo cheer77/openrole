@@ -29,10 +29,19 @@ export default defineConfig({
       use: { ...devices["iPhone 13"], defaultBrowserType: "chromium" },
     },
   ],
-  webServer: {
-    command: "npm run start -- --hostname 127.0.0.1 --port 3100",
-    url: "http://127.0.0.1:3100/jobs",
-    reuseExistingServer: false,
-    timeout: 60000,
-  },
+  webServer: [
+    {
+      command: "node --experimental-strip-types tests/support/start-api.mjs",
+      url: "http://127.0.0.1:4001/health",
+      reuseExistingServer: false,
+      timeout: 60000,
+    },
+    {
+      env: { API_URL: "http://127.0.0.1:4001" },
+      command: "npm run start -- --hostname 127.0.0.1 --port 3100",
+      url: "http://127.0.0.1:3100/login",
+      reuseExistingServer: false,
+      timeout: 60000,
+    },
+  ],
 });

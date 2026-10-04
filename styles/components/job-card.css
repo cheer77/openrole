@@ -317,3 +317,7 @@
     flex-wrap: wrap;
   }
 }
+
+.job-card {
+  overflow-wrap: anywhere;
+}

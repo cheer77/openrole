@@ -12,6 +12,7 @@ export const categories = [
   "AI / ML",
   "Marketing",
   "Sales",
+  "Other",
 ] as const;
 export const locations = [
   "Worldwide",
@@ -60,20 +61,18 @@ export interface Job {
     description: string;
     website: string;
   };
-  category: Category;
-  location: Location;
+  category: string;
+  location: string;
   city?: string;
-  workType: WorkType;
-  experience: Experience;
-  salary?: { min: number; max: number; currency: Currency };
+  workType: WorkType | "Not specified";
+  experience: string;
+  salary?: { min: number | null; max: number | null; currency: string };
   technologies: string[];
-  publishedAt: string;
+  publishedAt: string | null;
+  firstSeenAt: string;
+  sourceUrl: string;
   shortDescription: string;
   description: string[];
-  responsibilities: string[];
-  requirements: string[];
-  niceToHave: string[];
-  benefits: string[];
   eligibility: string;
   applyUrl: string;
 }

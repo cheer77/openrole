@@ -85,6 +85,28 @@ test("PostgreSQL synchronization and API regression", async (t) => {
         const body = await response.json();
         assert.equal(body.total, 1);
         assert.equal(body.items.length, 1);
+        for (const location of ["Spain", "Europe", "EU"]) {
+          const geographic = await (
+            await fetch(
+              `${base}/jobs?search=${encodeURIComponent(uid)}&location=${location}`,
+            )
+          ).json();
+          assert.equal(geographic.total, 1);
+        }
+        const worldwide = await (
+          await fetch(
+            `${base}/jobs?search=${encodeURIComponent(uid)}&location=Worldwide`,
+          )
+        ).json();
+        assert.equal(
+          worldwide.total,
+          0,
+          "Remote in Madrid must not imply worldwide eligibility",
+        );
+        await db.job.update({ where: { id: body.items[0].id }, data: { country: null, region: null, location: '' } });
+        const unknown = await (await fetch(`${base}/jobs?search=${encodeURIComponent(uid)}&location=Other`)).json();
+        assert.equal(unknown.total, 1, 'Other includes an unknown location');
+        await db.job.update({ where: { id: body.items[0].id }, data: { country: 'ES', location: 'Madrid' } });
         assert.equal(body.items[0].description, undefined);
         assert.equal(
           (await fetch(`${base}/jobs/${body.items[0].slug}`)).status,

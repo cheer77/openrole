@@ -1,11 +1,19 @@
 import type {
-  Category,
+  Category as JobCategory,
   Currency,
   Experience,
-  Job,
+  Job as Listing,
   Location,
   WorkType,
-} from "../features/jobs/types.ts";
+} from "../../features/jobs/types.ts";
+
+type Category = Exclude<JobCategory, "Other">;
+type Job = Listing & {
+  responsibilities: string[];
+  requirements: string[];
+  niceToHave: string[];
+  benefits: string[];
+};
 
 const companies = [
   [
@@ -708,7 +716,7 @@ const seeds: Seed[] = [
   ],
 ];
 
-const workByCategory: Record<Category, string[]> = {
+const workByCategory: Record<Exclude<Category, "Other">, string[]> = {
   Frontend: [
     "Build accessible, responsive interfaces with careful attention to interaction details.",
     "Improve rendering performance and evolve a maintainable component system.",
@@ -815,6 +823,8 @@ export function getMockJobs(now = Date.now()): Job[] {
         experience,
         salary: min ? { min, max, currency } : undefined,
         technologies: tech,
+        firstSeenAt: new Date(now).toISOString(),
+        sourceUrl: website,
         publishedAt: new Date(now - hours * 3600000).toISOString(),
         shortDescription: preview,
         description: [
