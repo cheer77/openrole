@@ -10,7 +10,7 @@ test("navigation and search controls have no duplicate entries", async ({
     name: mobile ? "Mobile navigation" : "Main navigation",
   });
   await expect(navigation.getByRole("link")).toHaveText(
-    mobile ? ["Jobs", "Companies"] : ["Find Jobs", "Companies"],
+    mobile ? ["Jobs", "Companies", "Profile"] : ["Find Jobs", "Companies"],
   );
   await expect(
     page.getByRole("combobox", { name: "Search location" }),
@@ -140,9 +140,10 @@ test("mobile navigation keeps all primary controls visible above safe area", asy
   await expect(
     navigation.getByRole("button", { name: "Alerts" }),
   ).toBeDisabled();
-  await expect(
-    navigation.getByRole("button", { name: "Profile" }),
-  ).toBeDisabled();
+  await expect(navigation.getByRole("link", { name: "Sign in" })).toHaveAttribute(
+    "href",
+    "/login",
+  );
   const bounds = await navigation.boundingBox();
   expect(bounds).not.toBeNull();
   expect(bounds!.x).toBeGreaterThanOrEqual(0);

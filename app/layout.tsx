@@ -22,6 +22,7 @@ import "@/styles/pages/jobs.css";
 import "@/styles/pages/job-details.css";
 import "@/styles/pages/companies.css";
 import "@/styles/pages/home.css";
+import "@/styles/pages/auth.css";
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,

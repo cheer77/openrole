@@ -51,18 +51,12 @@ export function SiteHeader() {
               <Icon name="bell" size={21} />
             </button>
           </div>
-          <button
-            type="button"
-            className="header-account"
-            disabled
-            aria-label="Guest profile — sign in coming soon"
-            title="Sign in — coming soon"
-          >
+          <Link className="header-account" href="/login" aria-label="Sign in">
             <span className="header-avatar">
               <Icon name="user" size={20} />
             </span>
             <span className="header-account-name">Guest</span>
-          </button>
+          </Link>
         </div>
       </div>
       <nav className="mobile-bottom-nav" aria-label="Mobile navigation">
@@ -90,10 +84,10 @@ export function SiteHeader() {
           <Icon name="bell" size={22} />
           <span>Alerts</span>
         </button>
-        <button type="button" disabled title="Sign in — coming soon">
+        <Link href="/login" aria-label="Sign in">
           <Icon name="user" size={22} />
           <span>Profile</span>
-        </button>
+        </Link>
       </nav>
     </header>
   );
