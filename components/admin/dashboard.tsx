@@ -12,6 +12,7 @@ export function Dashboard() {
   const { data, error, loading } = useAdminData<Report>(
     "dashboard?range=" + range,
     revision,
+    30000,
   );
   const labels = {
     visitors: "Visitors",
@@ -27,7 +28,7 @@ export function Dashboard() {
         <div>
           <span className="admin-eyebrow">THE BIG PICTURE</span>
           <h1>Overview</h1>
-          <p>Your job board, at a glance.</p>
+          <p>Updates every 30 seconds while this tab is visible.</p>
         </div>
         <label className="admin-range">
           <span>Date range</span>
@@ -64,7 +65,7 @@ export function Dashboard() {
           ))}
         </div>
       )}
-      {error && (
+      {error && !data && (
         <div className="empty-state" role="alert">
           <p>{error}</p>
           <button
@@ -74,6 +75,12 @@ export function Dashboard() {
             Try again
           </button>
         </div>
+      )}
+      {error && data && (
+        <p className="admin-muted" role="status">
+          Update failed. Showing the last available data; retrying
+          automatically.
+        </p>
       )}
       {data && (
         <>

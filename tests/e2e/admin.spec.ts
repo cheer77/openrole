@@ -240,3 +240,121 @@ test("analytics tracking respects privacy and never blocks Apply", async ({
   await expect(page.locator(".job-card").first()).toBeVisible();
   expect(events.length).toBe(count);
 });
+
+test("dashboard refresh is quiet, pauses when inactive and backs off on errors", async ({
+  page,
+}) => {
+  await page.clock.install({ time: new Date("2026-10-07T10:00:00Z") });
+  await page.clock.pauseAt(new Date("2026-10-07T10:00:00Z"));
+  let requests = 0;
+  let fail = false;
+  let release: (() => void) | undefined;
+  let hold = false;
+  await page.route("**/api/admin/dashboard?*", async (route) => {
+    requests++;
+    if (hold)
+      await new Promise<void>((resolve) => {
+        release = resolve;
+      });
+    if (fail)
+      return route.fulfill({
+        status: 503,
+        json: { message: "Temporary outage" },
+      });
+    const response = await route.fetch();
+    const data = await response.json();
+    data.summary.visitors = requests;
+    await route.fulfill({ json: data });
+  });
+  await page.goto("/admin/login");
+  await page.getByLabel("Owner password").fill(password);
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  const value = page.locator(".admin-kpi").first().locator("strong");
+  await expect(value).toHaveText("1");
+  const chart = page.getByRole("img", {
+    name: "Visitors over the selected period",
+  });
+  await chart.evaluate((element) =>
+    element.setAttribute("data-preserved", "yes"),
+  );
+  await page.clock.runFor(29999);
+  expect(requests).toBe(1);
+  hold = true;
+  await page.clock.runFor(1);
+  await expect.poll(() => requests).toBe(2);
+  await page.clock.runFor(10000);
+  expect(requests).toBe(2);
+  await expect(value).toHaveText("1");
+  await expect(
+    page.getByRole("status", { name: "Loading dashboard" }),
+  ).toHaveCount(0);
+  hold = false;
+  release!();
+  await expect(value).toHaveText("2");
+  await expect(chart).toHaveAttribute("data-preserved", "yes");
+
+  const visibility = async (state: "hidden" | "visible") =>
+    page.evaluate((state) => {
+      Object.defineProperty(document, "visibilityState", {
+        configurable: true,
+        value: state,
+      });
+      document.dispatchEvent(new Event("visibilitychange"));
+    }, state);
+  await visibility("hidden");
+  await page.clock.runFor(120000);
+  expect(requests).toBe(2);
+  await visibility("visible");
+  await page.clock.runFor(1);
+  await expect(value).toHaveText("3");
+  // Repeated focus changes must not bypass the minimum interval.
+  await visibility("hidden");
+  await visibility("visible");
+  await page.clock.runFor(1000);
+  expect(requests).toBe(3);
+
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, "onLine", {
+      configurable: true,
+      value: false,
+    });
+    window.dispatchEvent(new Event("offline"));
+  });
+  await page.clock.runFor(120000);
+  expect(requests).toBe(3);
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, "onLine", {
+      configurable: true,
+      value: true,
+    });
+    window.dispatchEvent(new Event("online"));
+  });
+  await page.clock.runFor(1);
+  await expect(value).toHaveText("4");
+  fail = true;
+  await page.clock.runFor(30000);
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: "Showing the last available data" }),
+  ).toBeVisible();
+  expect(requests).toBe(5);
+  await expect(value).toHaveText("4");
+  await page.clock.runFor(59999);
+  expect(requests).toBe(5);
+  fail = false;
+  await page.clock.runFor(1);
+  await expect(value).toHaveText("6");
+  await expect(
+    page.getByText("Showing the last available data", { exact: false }),
+  ).toHaveCount(0);
+  await page
+    .getByRole("navigation", { name: "Admin navigation" })
+    .getByRole("link", { name: "Jobs", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Jobs", exact: true }),
+  ).toBeVisible();
+  await page.clock.runFor(120000);
+  expect(requests).toBe(6);
+});
