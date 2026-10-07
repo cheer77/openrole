@@ -94,6 +94,7 @@ export function jobsQuery(input: unknown, now = new Date()) {
     });
   const where: Prisma.JobWhereInput = {
     status: "ACTIVE",
+    company: { enabled: true },
     source: { enabled: true },
     AND,
     ...(query.category

@@ -1,0 +1,13 @@
+ALTER TABLE "Company" ADD COLUMN "enabled" BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE "Job" ADD COLUMN "manualOverride" BOOLEAN NOT NULL DEFAULT false, ADD COLUMN "statusOverride" BOOLEAN NOT NULL DEFAULT false;
+CREATE TABLE "AdminSession" ("tokenHash" TEXT PRIMARY KEY, "expiresAt" TIMESTAMP(3) NOT NULL, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE INDEX "AdminSession_expiresAt_idx" ON "AdminSession"("expiresAt");
+CREATE TABLE "ImportLog" ("id" TEXT PRIMARY KEY, "sourceId" TEXT NOT NULL REFERENCES "Source"("id") ON DELETE CASCADE, "startedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "finishedAt" TIMESTAMP(3), "status" TEXT NOT NULL DEFAULT 'RUNNING', "jobsFound" INTEGER NOT NULL DEFAULT 0, "jobsCreated" INTEGER NOT NULL DEFAULT 0, "jobsUpdated" INTEGER NOT NULL DEFAULT 0, "jobsClosed" INTEGER NOT NULL DEFAULT 0, "error" TEXT);
+CREATE INDEX "ImportLog_startedAt_idx" ON "ImportLog"("startedAt");
+CREATE INDEX "ImportLog_sourceId_startedAt_idx" ON "ImportLog"("sourceId","startedAt");
+CREATE TABLE "DeletedJob" ("sourceId" TEXT NOT NULL REFERENCES "Source"("id") ON DELETE CASCADE, "externalId" TEXT NOT NULL, PRIMARY KEY("sourceId","externalId"));
+CREATE TABLE "AnalyticsEvent" ("id" TEXT PRIMARY KEY, "type" TEXT NOT NULL, "occurredAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "visitorId" TEXT NOT NULL, "sessionId" TEXT NOT NULL, "path" TEXT NOT NULL, "jobId" TEXT, "referrer" TEXT, "utmSource" TEXT, "utmMedium" TEXT, "utmCampaign" TEXT, "trafficSource" TEXT NOT NULL, "country" TEXT, "region" TEXT, "city" TEXT, "device" TEXT NOT NULL, "browser" TEXT NOT NULL, "os" TEXT NOT NULL);
+CREATE INDEX "AnalyticsEvent_occurredAt_idx" ON "AnalyticsEvent"("occurredAt");
+CREATE INDEX "AnalyticsEvent_jobId_occurredAt_idx" ON "AnalyticsEvent"("jobId","occurredAt");
+CREATE INDEX "AnalyticsEvent_visitorId_occurredAt_idx" ON "AnalyticsEvent"("visitorId","occurredAt");
+CREATE INDEX "AnalyticsEvent_sessionId_occurredAt_idx" ON "AnalyticsEvent"("sessionId","occurredAt");

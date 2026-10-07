@@ -11,6 +11,11 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.custom-select:disabled {
+  cursor: not-allowed;
+  color: var(--text-secondary);
+  background: var(--surface);
+}
 .custom-select[aria-expanded="true"] {
   box-shadow: 0 0 0 3px var(--brand-soft);
 }

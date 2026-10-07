@@ -1,6 +1,6 @@
-# Openrole backend — Phase 2
+# Openrole backend — Phase 4
 
-NestJS 12 (ESM), PostgreSQL 17, Prisma 7, Redis 7, BullMQ. Backend — отдельный npm-пакет. В Phase 3 frontend подключён к API через сервер Next.js (`API_URL`); mock-данные используются только в изолированных тестах. Пользовательская авторизация, OAuth, кабинеты и admin API пока не реализованы.
+NestJS 12 (ESM), PostgreSQL 17, Prisma 7, Redis 7, BullMQ. Backend — отдельный npm-пакет. В Phase 3 frontend подключён к API через сервер Next.js (`API_URL`); mock-данные используются только в изолированных тестах. Owner API и privacy-conscious аналитика реализованы в Phase 4. Кабинеты соискателей/работодателей и OAuth остаются за границами фазы.
 
 ## Быстрый запуск
 
@@ -34,7 +34,7 @@ API применяет миграции перед запуском; worker ст
 
 ## Источники и ручной запуск
 
-Публичных изменяющих API пока нет. Компании и источники конфигурируются локальной CLI:
+Публичных изменяющих API пока нет. Компании и источники управляются защищённой панелью `/admin`; локальная CLI также доступна:
 
 ```sh
 cp sources.example.json sources.local.json
@@ -86,7 +86,7 @@ npm run sync
 - `publishedAt` — дата источника, `firstSeenAt` — первое обнаружение, `lastCheckedAt` — последнее подтверждение присутствия. `sortDate` равен publishedAt, иначе firstSeenAt. Greenhouse `updated_at` не выдаётся за публикацию. Повторный импорт не делает старые вакансии свежими.
 - Отсутствие вакансии в полном успешном снимке задаёт `missingSince`. Закрытие происходит после повторного подтверждения минимум через 24 часа. Это применяется и к пустому board. HTTP-ошибка, timeout, дубликаты ID и неверная структура не закрывают вакансии. CLOSED сохраняются; повторное появление возвращает ACTIVE. HIDDEN не раскрываются автоматически.
 - Весь импорт одного источника атомарен. PostgreSQL advisory lock исключает одновременную обработку источника; BullMQ deduplication исключает повторную постановку активного задания. Worker запускает общий scheduler раз в час, обрабатывает не более двух заданий одновременно, делает три попытки с exponential backoff.
-- Последняя попытка, успешная синхронизация и ошибка доступны в Source. Структурированные сообщения worker содержат created/updated/closed. Redis хранит последние 100 завершённых и 200 неуспешных заданий. Admin UI и исторические import logs относятся к следующим фазам.
+- Последняя попытка, успешная синхронизация и ошибка доступны в Source. Структурированные сообщения worker содержат created/updated/closed. Redis хранит последние 100 завершённых и 200 неуспешных заданий. Исторические ImportLog сохраняют исход каждой попытки (SUCCESS/FAILED/SKIPPED/INTERRUPTED), времена и счётчики и доступны в `/admin/logs`.
 
 ## Проверки
 
@@ -106,8 +106,23 @@ DATABASE_URL=postgresql://openrole:openrole_local@127.0.0.1:5433/openrole_test n
 npm run test:integration
 ```
 
-`TEST_DATABASE_URL` задаётся в `.env`; тест не допускает имя обычной базы и очищает только созданные им записи. Проверяются импорт/повторный импорт, сохранение дат и slug, ошибки источника, закрытие/повторное открытие, HIDDEN, отключение источника, реальные HTTP-ответы и query validation.
+`TEST_DATABASE_URL` задаётся в `.env`; тест не допускает имя обычной базы; тестовые события очищаются, поэтому эту базу нельзя использовать для иных данных. Проверяются импорт/повторный импорт, сохранение дат и slug, ошибки источника, закрытие/повторное открытие, HIDDEN, отключение источника, реальные HTTP-ответы, query validation, owner-сессии, ручные правки, tombstone, analytics validation и retention.
 
 Prisma Client генерируется при build и не хранится в git. Миграции хранятся в git и применяются через `migrate deploy`. Зафиксированы overrides для исправленных `deepmerge-ts` и `mysql2`, используемых Prisma CLI; совместимость проверяется генерацией клиента и миграциями.
 
 Официальные спецификации: [Greenhouse Job Board API](https://docs.greenhouse.io/job-board.html), [Lever Postings API](https://github.com/lever/postings-api), [Ashby Public Job Posting API](https://developers.ashbyhq.com/docs/public-job-posting-api), [BullMQ schedulers](https://docs.bullmq.io/guide/job-schedulers).
+
+
+## Owner API и аналитика
+
+В корне выполните `npm run admin:setup`, затем пересоберите Docker backend. Секреты хранятся в gitignored `.env.owner`, пароль — в `.owner-credentials.local` с правами 0600. При запуске без Docker передайте `OWNER_PASSWORD_HASH` и `INTERNAL_API_KEY` из защищённого окружения; Next.js должен использовать тот же внутренний ключ. Подробная настройка и ротация — в корневом README.
+
+- `POST /owner-auth/login`: internal key + пароль, scrypt verification, 8-часовая сессия. PostgreSQL хранит только hash token; смена password hash отзывает все прежние сессии. `GET /admin/session` проверяет доступ, `POST /admin/logout` отзывает сессию.
+- Все `/admin/*` защищены OwnerGuard. `GET /admin/dashboard?range=today|yesterday|7|30|90`, jobs/companies/sources/logs с пагинацией; POST/PATCH компаний/источников, PATCH job и status, POST job/reset, DELETE job, POST source/sync. Next BFF дополнительно проверяет Origin изменений; браузеру token не возвращается в JSON.
+- `manualOverride` защищает от импорта отредактированные поля, `statusOverride` — явно выбранный статус. Reset снимает обе защиты для следующего импорта. Изменения job используют тот же advisory lock, что импорт; занятый источник возвращает 409 с предложением повторить. DeletedJob блокирует повторное появление удалённой записи. Disabled company скрывает её вакансии и исключает будущие sync.
+- `POST /events` требует internal key и строгую схему: UUID, разрешённый публичный pathname, PAGE_VIEW/JOB_VIEW/APPLY_CLICK. Сервер проверяет соответствие вакансии и пути. Время задаёт сервер, UUID события обеспечивает идемпотентность. Raw IP, полный user-agent, полные referrer URL и query-параметры поиска не сохраняются; user-agent преобразуется в device/browser/OS. Географию передаёт только настроенный доверенный Next GeoProvider.
+- SQL-отчёты используют UTC и уникальные анонимные visitor/session ID. CTR = Apply clicks / job views; это не число успешных заявок. Top CTR требует 5 просмотров. Период относится к аналитике, inventory — ко всем записям.
+- Hourly worker удаляет события старше 90 дней, import logs старше 30 дней, истёкшие owner sessions; RUNNING старше часа получает INTERRUPTED. Будущая агрегация может заменить SQL за границей `analyticsReport`.
+- Rate limits в памяти одного процесса: login 10/5 минут, события 2000/минуту глобально и 90/минуту на session, sync 20/минуту. Перед масштабированием API лимиты следует перенести в Redis. API не должен публиковать внутренний ключ.
+
+E2E использует отдельную test DB и Redis DB 15, без рабочего worker. Не запускайте backend integration и frontend E2E одновременно.

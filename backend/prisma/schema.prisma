@@ -32,6 +32,7 @@ enum RemoteType {
 model Company {
   id String @id @default(cuid())
   name String
+  enabled Boolean @default(true)
   slug String @unique
   logoUrl String?
   website String?
@@ -57,6 +58,8 @@ model Source {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   jobs Job[]
+  importLogs ImportLog[]
+  deletions DeletedJob[]
   @@unique([type, sourceIdentifier])
 }
 
@@ -91,6 +94,8 @@ model Job {
   sortDate DateTime
   missingSince DateTime?
   status JobStatus @default(ACTIVE)
+  manualOverride Boolean @default(false)
+  statusOverride Boolean @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   @@unique([sourceId, externalId])
@@ -103,4 +108,59 @@ model Job {
   @@index([companyId])
   @@index([currency, salaryMin])
   @@index([technologies], type: Gin)
+}
+
+model AdminSession {
+  tokenHash String @id
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  @@index([expiresAt])
+}
+
+model ImportLog {
+  id String @id @default(cuid())
+  sourceId String
+  source Source @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  startedAt DateTime @default(now())
+  finishedAt DateTime?
+  status String @default("RUNNING")
+  jobsFound Int @default(0)
+  jobsCreated Int @default(0)
+  jobsUpdated Int @default(0)
+  jobsClosed Int @default(0)
+  error String?
+  @@index([startedAt])
+  @@index([sourceId, startedAt])
+}
+
+model DeletedJob {
+  sourceId String
+  externalId String
+  source Source @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  @@id([sourceId, externalId])
+}
+
+model AnalyticsEvent {
+  id String @id
+  type String
+  occurredAt DateTime @default(now())
+  visitorId String
+  sessionId String
+  path String
+  jobId String?
+  referrer String?
+  utmSource String?
+  utmMedium String?
+  utmCampaign String?
+  trafficSource String
+  country String?
+  region String?
+  city String?
+  device String
+  browser String
+  os String
+  @@index([occurredAt])
+  @@index([jobId, occurredAt])
+  @@index([visitorId, occurredAt])
+  @@index([sessionId, occurredAt])
 }

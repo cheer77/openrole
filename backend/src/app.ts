@@ -1,5 +1,11 @@
 import "reflect-metadata";
 import {
+  AdminController,
+  OwnerAuthController,
+  EventsController,
+} from "./admin.js";
+import { OwnerGuard } from "./admin-auth.js";
+import {
   BadRequestException,
   Controller,
   Get,
@@ -75,7 +81,12 @@ class ApiController {
   async job(@Param("slug") slug: string) {
     if (slug.length > 220) throw new BadRequestException("Invalid slug");
     const job = await this.database.client.job.findFirst({
-      where: { slug, status: "ACTIVE", source: { enabled: true } },
+      where: {
+        slug,
+        status: "ACTIVE",
+        company: { enabled: true },
+        source: { enabled: true },
+      },
       omit: { missingSince: true },
       include: { company: true },
     });
@@ -96,6 +107,7 @@ class ApiController {
     if (!parsed.success) throw new BadRequestException("Invalid company query");
     const { page, limit, search } = parsed.data;
     const where = {
+      enabled: true,
       sources: { some: { enabled: true } },
       ...(search
         ? { name: { contains: search, mode: "insensitive" as const } }
@@ -113,7 +125,11 @@ class ApiController {
             _count: {
               select: {
                 jobs: {
-                  where: { status: "ACTIVE", source: { enabled: true } },
+                  where: {
+                    status: "ACTIVE",
+                    company: { enabled: true },
+                    source: { enabled: true },
+                  },
                 },
               },
             },
@@ -126,7 +142,15 @@ class ApiController {
   }
 }
 
-@Module({ controllers: [ApiController], providers: [Database] })
+@Module({
+  controllers: [
+    ApiController,
+    AdminController,
+    OwnerAuthController,
+    EventsController,
+  ],
+  providers: [Database, OwnerGuard],
+})
 class AppModule {}
 
 export async function createApp() {

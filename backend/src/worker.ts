@@ -1,3 +1,4 @@
+import { retainData } from "./analytics.js";
 import { Worker } from "bullmq";
 import { createDb } from "./db.js";
 import { createQueue, enqueueSources, queueName } from "./queue.js";
@@ -17,8 +18,10 @@ async function main() {
   const worker = new Worker<{ sourceId?: string }>(
     queueName,
     async (job) => {
-      if (job.name === "all")
+      if (job.name === "all") {
+        await retainData(db);
         return { queued: await enqueueSources(queue, db) };
+      }
       if (job.name !== "source" || !job.data.sourceId)
         throw new Error("Invalid sync job");
       return syncSource(db, job.data.sourceId);

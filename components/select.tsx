@@ -16,6 +16,7 @@ type Props = {
   children: ReactNode;
   value?: string;
   defaultValue?: string;
+  disabled?: boolean;
   onChange?: (value: string) => void;
   name?: string;
   id?: string;
@@ -26,6 +27,7 @@ export function Select({
   children,
   value,
   defaultValue = "",
+  disabled = false,
   onChange,
   name,
   id,
@@ -140,6 +142,7 @@ export function Select({
       <button
         ref={trigger}
         type="button"
+        disabled={disabled}
         id={id}
         className="custom-select"
         role="combobox"

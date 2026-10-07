@@ -1,3 +1,4 @@
+import { JobView } from "@/components/analytics";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -39,6 +40,7 @@ export default async function JobDetails({ params, searchParams }: Props) {
       className="container detail-page"
       data-job-id={job.id}
     >
+      <JobView jobId={job.id} />
       <Link href={backHref} className="back-link">
         <Icon name="back" size={17} />
         Back to all jobs

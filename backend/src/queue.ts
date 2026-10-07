@@ -23,6 +23,7 @@ export async function enqueueSources(
   const sources = await db.source.findMany({
     where: {
       enabled: true,
+      company: { enabled: true },
       type: { not: "MANUAL" },
       ...(sourceId ? { id: sourceId } : {}),
     },

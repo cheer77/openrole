@@ -8,6 +8,7 @@ export default defineConfig({
   projects: [
     {
       name: "firefox",
+      testIgnore: "**/admin.spec.ts",
       use: {
         ...devices["Desktop Firefox"],
         viewport: { width: 1440, height: 1000 },
@@ -15,6 +16,7 @@ export default defineConfig({
     },
     {
       name: "desktop",
+      testIgnore: "**/admin.spec.ts",
       use: {
         ...devices["Desktop Chrome"],
         viewport: { width: 1440, height: 1000 },
@@ -22,12 +24,36 @@ export default defineConfig({
     },
     {
       name: "mobile-safari",
+      testIgnore: "**/admin.spec.ts",
       use: { ...devices["iPhone 13"], browserName: "webkit" },
     },
     {
       name: "mobile",
+      testIgnore: "**/admin.spec.ts",
       use: { ...devices["iPhone 13"], defaultBrowserType: "chromium" },
     },
+    ...["desktop", "firefox", "mobile-safari", "mobile"].map((name) => ({
+      name: "owner-" + name,
+      testMatch: "**/admin.spec.ts",
+      dependencies: ["desktop", "firefox", "mobile-safari", "mobile"],
+      use:
+        name === "firefox"
+          ? {
+              ...devices["Desktop Firefox"],
+              viewport: { width: 1440, height: 1000 },
+            }
+          : name === "mobile-safari"
+            ? { ...devices["iPhone 13"], browserName: "webkit" as const }
+            : name === "mobile"
+              ? {
+                  ...devices["iPhone 13"],
+                  defaultBrowserType: "chromium" as const,
+                }
+              : {
+                  ...devices["Desktop Chrome"],
+                  viewport: { width: 1440, height: 1000 },
+                },
+    })),
   ],
   webServer: [
     {
@@ -37,7 +63,12 @@ export default defineConfig({
       timeout: 60000,
     },
     {
-      env: { API_URL: "http://127.0.0.1:4001" },
+      env: {
+        API_URL: "http://127.0.0.1:4001",
+        INTERNAL_API_KEY: "test-internal-key-openrole-012345678901234567890",
+        ADMIN_COOKIE_SECURE: "false",
+        GEO_PROVIDER: "none",
+      },
       command: "npm run start -- --hostname 127.0.0.1 --port 3100",
       url: "http://127.0.0.1:3100/login",
       reuseExistingServer: false,

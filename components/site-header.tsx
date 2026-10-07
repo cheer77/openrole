@@ -5,6 +5,7 @@ import { Icon } from "./icon";
 
 export function SiteHeader() {
   const pathname = usePathname();
+  if (pathname.startsWith("/admin")) return null;
   return (
     <header className="site-header">
       <div className="container header-inner">
@@ -93,6 +94,8 @@ export function SiteHeader() {
   );
 }
 export function SiteFooter() {
+  const pathname = usePathname();
+  if (pathname.startsWith("/admin")) return null;
   return (
     <footer className="site-footer">
       <div className="container footer-inner">
@@ -103,7 +106,7 @@ export function SiteFooter() {
         <nav aria-label="Footer navigation">
           <Link href="/jobs">Find Jobs</Link>
           <Link href="/companies">Companies</Link>
-          <span>Discover your next role</span>
+          <Link href="/privacy">Privacy</Link>
         </nav>
       </div>
     </footer>

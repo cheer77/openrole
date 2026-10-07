@@ -10,3 +10,5 @@ playwright-report/
 backend/dist/
 backend/src/generated/
 backend/sources.local.json
+
+.owner-credentials.local

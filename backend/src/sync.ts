@@ -25,8 +25,9 @@ export async function syncSource(
   provider?: JobProvider,
   now = new Date(),
 ) {
+  const log = await db.importLog.create({ data: { sourceId, startedAt: now } });
   try {
-    return await db.$transaction(
+    const result = await db.$transaction(
       async (tx) => {
         const locks = await tx.$queryRaw<
           { locked: boolean }[]
@@ -34,8 +35,13 @@ export async function syncSource(
         if (!locks[0]?.locked) return { skipped: true };
         const source = await tx.source.findUniqueOrThrow({
           where: { id: sourceId },
+          include: { company: true },
         });
-        if (!source.enabled || source.type === "MANUAL")
+        if (
+          !source.enabled ||
+          !source.company.enabled ||
+          source.type === "MANUAL"
+        )
           return { skipped: true };
         const jobs = (
           await (provider ?? getProvider(source.type)).fetch(
@@ -52,14 +58,22 @@ export async function syncSource(
           select: {
             externalId: true,
             status: true,
+            statusOverride: true,
+            manualOverride: true,
             publishedAt: true,
             firstSeenAt: true,
           },
         });
         const byId = new Map(existing.map((job) => [job.externalId, job]));
+        const deleted = new Set(
+          (await tx.deletedJob.findMany({ where: { sourceId } })).map(
+            (item) => item.externalId,
+          ),
+        );
         let created = 0;
         let updated = 0;
         for (const job of jobs) {
+          if (deleted.has(job.externalId)) continue;
           const old = byId.get(job.externalId);
           const publishedAt = job.publishedAt ?? old?.publishedAt ?? null;
           const values = {
@@ -81,8 +95,10 @@ export async function syncSource(
               firstSeenAt: now,
             },
             update: {
-              ...values,
-              status: old?.status === "HIDDEN" ? "HIDDEN" : "ACTIVE",
+              ...(old?.manualOverride
+                ? { lastCheckedAt: now, missingSince: null }
+                : values),
+              status: old?.statusOverride ? old.status : "ACTIVE",
             },
           });
           if (old) updated++;
@@ -93,6 +109,7 @@ export async function syncSource(
         const absent = {
           sourceId,
           status: "ACTIVE" as const,
+          statusOverride: false,
           externalId: { notIn: ids },
         };
         const closed = await tx.job.updateMany({
@@ -114,9 +131,29 @@ export async function syncSource(
       },
       { maxWait: 5000, timeout: 300000 },
     );
+    await db.importLog.update({
+      where: { id: log.id },
+      data: {
+        finishedAt: new Date(),
+        status: "skipped" in result ? "SKIPPED" : "SUCCESS",
+        ...("found" in result
+          ? {
+              jobsFound: result.found,
+              jobsCreated: result.created,
+              jobsUpdated: result.updated,
+              jobsClosed: result.closed,
+            }
+          : {}),
+      },
+    });
+    return result;
   } catch (error) {
     const message =
       error instanceof Error ? error.message.slice(0, 1000) : "Import failed";
+    await db.importLog.update({
+      where: { id: log.id },
+      data: { finishedAt: new Date(), status: "FAILED", error: message },
+    });
     await db.source.updateMany({
       where: {
         id: sourceId,

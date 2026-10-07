@@ -1,3 +1,4 @@
+import { Analytics } from "@/components/analytics";
 import type { Metadata, Viewport } from "next";
 import { SiteFooter, SiteHeader } from "@/components/site-header";
 import "@/styles/tailwind.css";
@@ -23,6 +24,7 @@ import "@/styles/pages/job-details.css";
 import "@/styles/pages/companies.css";
 import "@/styles/pages/home.css";
 import "@/styles/pages/auth.css";
+import "@/styles/pages/admin.css";
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
@@ -47,6 +49,7 @@ export default function RootLayout({
         <a className="skip-link" href="#main-content">
           Skip to content
         </a>
+        <Analytics />
         <SiteHeader />
         {children}
         <SiteFooter />

@@ -239,7 +239,7 @@ test("PostgreSQL synchronization and API regression", async (t) => {
         });
         await db.job.update({
           where: { id: job.id },
-          data: { status: "HIDDEN" },
+          data: { status: "HIDDEN", statusOverride: true },
         });
         await syncSource(db, source.id, provider);
         assert.equal(

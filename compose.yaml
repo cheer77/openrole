@@ -31,6 +31,9 @@ services:
       timeout: 3s
       retries: 20
   api:
+    env_file:
+      - path: .env.owner
+        required: false
     build: ./backend
     profiles: ["backend"]
     environment:

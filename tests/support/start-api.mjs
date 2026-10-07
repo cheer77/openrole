@@ -1,5 +1,6 @@
 // Real Nest/PostgreSQL fixture server. Never seeds the development database.
 import { getMockJobs } from "../fixtures/jobs.ts";
+import { scryptSync } from "node:crypto";
 import { loadEnvFile } from "node:process";
 try {
   loadEnvFile("backend/.env");
@@ -10,10 +11,20 @@ const url = process.env.TEST_DATABASE_URL;
 if (!url || !new URL(url).pathname.endsWith("_test"))
   throw new Error("TEST_DATABASE_URL must name a dedicated *_test database");
 process.env.DATABASE_URL = url;
+process.env.INTERNAL_API_KEY =
+  "test-internal-key-openrole-012345678901234567890";
+const salt = "01234567890123456789012345678901";
+process.env.OWNER_PASSWORD_HASH =
+  salt +
+  ":" +
+  scryptSync("test-owner-password-only-2026", salt, 64).toString("hex");
+process.env.REDIS_URL = "redis://127.0.0.1:6380/15";
 const { createDb } = await import("../../backend/dist/src/db.js");
 const { createApp } = await import("../../backend/dist/src/app.js");
 const db = createDb(url);
 // Tests share a dedicated database. Do not run concurrently with backend integration tests.
+await db.analyticsEvent.deleteMany();
+await db.adminSession.deleteMany();
 await db.job.deleteMany();
 await db.source.deleteMany();
 await db.company.deleteMany();
