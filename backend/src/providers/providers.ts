@@ -1,36 +1,15 @@
 import { z } from "zod";
 import { normalize, httpUrl, type NormalizedJob } from "./normalize.js";
+import { fetchJson, type FetchJson } from "./http.js";
+import { parseIdentifier } from "./source-config.js";
+import { SmartRecruitersProvider } from "./smartrecruiters.js";
+import { PersonioProvider, RecruiteeProvider } from "./xml-providers.js";
+export { fetchJson, type FetchJson } from "./http.js";
+export { sourceIdentifierSchema } from "./source-config.js";
 
-export type FetchJson = (url: string) => Promise<unknown>;
 export interface JobProvider {
   fetch(identifier: string): Promise<NormalizedJob[]>;
 }
-
-export const sourceIdentifierSchema = z
-  .string()
-  .regex(/^(?:eu:)?[a-zA-Z0-9_-]{1,150}$/);
-
-export const fetchJson: FetchJson = async (url) => {
-  const response = await fetch(url, {
-    signal: AbortSignal.timeout(20000),
-    redirect: "error",
-    headers: {
-      Accept: "application/json",
-      "User-Agent": "Openrole/0.2 (job-board-sync)",
-    },
-  });
-  if (!response.ok) throw new Error(`Provider HTTP ${response.status}`);
-  if (!response.body) throw new Error("Provider returned no body");
-  const chunks: Uint8Array[] = [];
-  let size = 0;
-  for await (const chunk of response.body) {
-    size += chunk.byteLength;
-    if (size > 20 * 1024 * 1024)
-      throw new Error("Provider response exceeds 20 MB");
-    chunks.push(chunk);
-  }
-  return JSON.parse(Buffer.concat(chunks).toString("utf8")) as unknown;
-};
 
 const greenhouseSchema = z.object({
   jobs: z
@@ -51,7 +30,7 @@ const greenhouseSchema = z.object({
 export class GreenhouseProvider implements JobProvider {
   constructor(private readonly get: FetchJson = fetchJson) {}
   async fetch(identifier: string) {
-    const board = sourceIdentifierSchema.parse(identifier);
+    const board = parseIdentifier("GREENHOUSE", identifier);
     const body = greenhouseSchema.parse(
       await this.get(
         `https://boards-api.greenhouse.io/v1/boards/${encodeURIComponent(board)}/jobs?content=true`,
@@ -109,7 +88,7 @@ const leverSchema = z
 export class LeverProvider implements JobProvider {
   constructor(private readonly get: FetchJson = fetchJson) {}
   async fetch(identifier: string) {
-    sourceIdentifierSchema.parse(identifier);
+    parseIdentifier("LEVER", identifier);
     const eu = identifier.startsWith("eu:");
     const board = encodeURIComponent(eu ? identifier.slice(3) : identifier);
     const jobs: NormalizedJob[] = [];
@@ -157,8 +136,8 @@ const ashbySchema = z.object({
         title: z.string(),
         location: z.string().optional(),
         isListed: z.boolean(),
-        isRemote: z.boolean().optional(),
-        workplaceType: z.string().optional(),
+        isRemote: z.boolean().nullish(),
+        workplaceType: z.string().nullish(),
         descriptionPlain: z.string().optional(),
         descriptionHtml: z.string().optional(),
         publishedAt: z.string().datetime({ offset: true }).optional(),
@@ -173,9 +152,9 @@ const ashbySchema = z.object({
                 addressRegion: z.string().nullish(),
                 addressCountry: z.string().nullish(),
               })
-              .optional(),
+              .nullish(),
           })
-          .optional(),
+          .nullish(),
         compensation: z
           .object({
             summaryComponents: z
@@ -199,7 +178,7 @@ const ashbySchema = z.object({
 export class AshbyProvider implements JobProvider {
   constructor(private readonly get: FetchJson = fetchJson) {}
   async fetch(identifier: string) {
-    const board = sourceIdentifierSchema.parse(identifier);
+    const board = parseIdentifier("ASHBY", identifier);
     const body = ashbySchema.parse(
       await this.get(
         `https://api.ashbyhq.com/posting-api/job-board/${encodeURIComponent(board)}?includeCompensation=true`,
@@ -245,5 +224,8 @@ export function getProvider(type: string): JobProvider {
   if (type === "GREENHOUSE") return new GreenhouseProvider();
   if (type === "LEVER") return new LeverProvider();
   if (type === "ASHBY") return new AshbyProvider();
+  if (type === "SMARTRECRUITERS") return new SmartRecruitersProvider();
+  if (type === "PERSONIO") return new PersonioProvider();
+  if (type === "RECRUITEE") return new RecruiteeProvider();
   throw new Error(`Source type ${type} cannot be synchronized`);
 }

@@ -31,7 +31,11 @@ import {
   trafficSource,
 } from "./analytics.js";
 import { httpUrl } from "./providers/normalize.js";
-import { sourceIdentifierSchema } from "./providers/providers.js";
+import {
+  sourceIdentifierSchema,
+  importSourceTypes,
+  validSourceIdentifier,
+} from "./providers/source-config.js";
 import { createQueue, enqueueSources } from "./queue.js";
 import type { Prisma, Job } from "./generated/prisma/client.js";
 function parse<T>(schema: z.ZodType<T>, input: unknown): T {
@@ -59,7 +63,7 @@ const companySchema = z
 const sourceSchema = z
   .object({
     name: z.string().trim().min(1).max(120),
-    type: z.enum(["GREENHOUSE", "LEVER", "ASHBY"]),
+    type: z.enum(importSourceTypes),
     companyId: z.string().min(1).max(100),
     sourceIdentifier: sourceIdentifierSchema,
     enabled: z.boolean(),
@@ -71,7 +75,7 @@ const jobSchema = z
     description: z.string().min(1).max(100000),
     shortDescription: z.string().max(1000),
     category: z.string().min(1).max(80),
-    location: z.string().max(500),
+    location: z.string().max(5000),
     remoteType: z.enum(["REMOTE", "HYBRID", "ON_SITE", "UNKNOWN"]),
     experienceLevel: z.enum(["Junior", "Middle", "Senior", "Lead"]).nullable(),
     salaryMin: z.number().min(0).max(100000000).nullable(),
@@ -381,8 +385,10 @@ export class AdminController {
       }))
     )
       throw new BadRequestException("Company not found");
-    if (data.type !== "LEVER" && data.sourceIdentifier.startsWith("eu:"))
-      throw new BadRequestException("EU prefix is only valid for Lever");
+    if (!validSourceIdentifier(data))
+      throw new BadRequestException(
+        "Invalid identifier for this provider (eu: is Lever only; de: is Personio only)",
+      );
     if (
       await this.db.client.source.findFirst({
         where: {

@@ -226,6 +226,41 @@ test("owner authentication, management, import overrides and private analytics",
       },
     );
     await t.test(
+      "owner can configure European API/XML providers with provider-specific identifiers",
+      async () => {
+        for (const type of ["SMARTRECRUITERS", "PERSONIO", "RECRUITEE"]) {
+          const body = {
+            name: type + " test",
+            type,
+            companyId: company.id,
+            sourceIdentifier: uid,
+            enabled: false,
+          };
+          const response = await call("/admin/sources", "POST", body);
+          assert.equal(response.status, 201);
+          const created = await response.json();
+          try {
+            assert.equal(created.type, type);
+            assert.equal(
+              (await call("/admin/sources", "POST", body)).status,
+              409,
+            );
+            assert.equal(
+              (
+                await call("/admin/sources", "POST", {
+                  ...body,
+                  sourceIdentifier: "eu:" + uid,
+                })
+              ).status,
+              400,
+            );
+          } finally {
+            await db.source.delete({ where: { id: created.id } });
+          }
+        }
+      },
+    );
+    await t.test(
       "analytics is idempotent, validates job provenance, aggregates and never records raw IP",
       async () => {
         await db.analyticsEvent.deleteMany();

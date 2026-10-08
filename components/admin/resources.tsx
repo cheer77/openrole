@@ -681,7 +681,7 @@ function Editor({
                 ))}
               </Select>
             </label>
-            {field("location", "Location", { maxLength: 500 })}
+            {field("location", "Location", { maxLength: 5000 })}
             <div className="admin-form-grid">
               <label className="admin-field">
                 <span>Work arrangement</span>
@@ -756,7 +756,14 @@ function Editor({
                     disabled={!!item.id}
                     aria-label="Provider"
                   >
-                    {["GREENHOUSE", "LEVER", "ASHBY"].map((v) => (
+                    {[
+                      "GREENHOUSE",
+                      "LEVER",
+                      "ASHBY",
+                      "SMARTRECRUITERS",
+                      "PERSONIO",
+                      "RECRUITEE",
+                    ].map((v) => (
                       <option key={v}>{v}</option>
                     ))}
                   </Select>
@@ -768,12 +775,14 @@ function Editor({
                     defaultValue={item.sourceIdentifier}
                     required
                     readOnly={!!item.id}
-                    maxLength={100}
+                    maxLength={153}
                   />
                 </label>
                 <p className="admin-muted">
                   Board identifier, not a URL. For a Lever EU board use
-                  eu:board-name.
+                  eu:board-name. Personio uses company for .com or de:company
+                  for .de. Recruitee uses the careers subdomain; SmartRecruiters
+                  uses the company identifier.
                 </p>
               </>
             )}

@@ -159,6 +159,30 @@ test("source identifiers cannot change provider host or path", async () => {
   );
 });
 
+test("large multi-location boards keep all locations and Ashby null workplace stays unknown", async () => {
+  const location = Array.from(
+    { length: 60 },
+    (_, i) => `Office ${i}, Germany`,
+  ).join("; ");
+  assert.equal(normalize({ ...raw, location }).location, location);
+  const [job] = await new AshbyProvider(async () => ({
+    jobs: [
+      {
+        id: "nullable",
+        title: raw.title,
+        isListed: true,
+        isRemote: null,
+        workplaceType: null,
+        address: null,
+        descriptionPlain: "Build software",
+        jobUrl: raw.sourceUrl,
+        applyUrl: raw.applyUrl,
+      },
+    ],
+  })).fetch("example");
+  assert.equal(job.remoteType, "UNKNOWN");
+});
+
 test("query validation bounds pagination and uses one currency for salary comparisons", () => {
   assert.throws(() => jobsQuery({ limit: "1000" }));
   assert.throws(() => jobsQuery({ page: "-1" }));

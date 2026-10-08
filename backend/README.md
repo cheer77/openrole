@@ -43,9 +43,31 @@ npm run sources:import -- sources.local.json
 npm run sync
 ```
 
-Повторный импорт конфигурации обновляет существующие записи, не создавая дубликатов. Источник закреплён за одной компанией. `enabled: false` исключает его из синхронизации и публичной выдачи; отсутствие источника в JSON не удаляет его. `MANUAL` поддерживается в модели, но автоматически не импортируется. Greenhouse/Ashby принимают имя публичного board, Lever — имя сайта; для европейского Lever используйте `eu:company`. Произвольный URL как identifier не принимается.
+Повторный импорт конфигурации обновляет существующие записи, не создавая дубликатов. Источник закреплён за одной компанией. `enabled: false` исключает его из синхронизации и публичной выдачи; отсутствие источника в JSON не удаляет его. `MANUAL` поддерживается в модели, но автоматически не импортируется. Произвольный URL как identifier не принимается.
 
-Примеры в репозитории выключены по умолчанию, реальные вакансии не включены в seed. Чтобы поставить в очередь один источник: `npm run sync -- SOURCE_ID`. Worker должен работать, иначе задания остаются в Redis. В Docker CLI доступна через `docker compose exec api node dist/src/cli.js sync` (для JSON используйте файл внутри контейнера).
+| Provider | Source identifier | Интерфейс |
+| --- | --- | --- |
+| GREENHOUSE | `adyen` | Public Job Board API, JSON |
+| LEVER | `qonto`, либо `eu:company` для EU instance | Public Postings API, JSON |
+| ASHBY | `n8n` | Public Job Posting API, JSON |
+| SMARTRECRUITERS | `Wise` | Public Posting API, список + полные описания |
+| PERSONIO | `personio` для .com, `de:company` для .de | Включённый работодателем XML feed, язык en |
+| RECRUITEE | `bunq` | Public formatted XML feed `/api/feeds/offers.xml` |
+
+Новый источник добавляется через `/admin/companies` → `/admin/sources` → **Add source**: выбрать компанию и провайдера, указать identifier, включить Enabled и нажать **Sync now**. Ключ для этих публичных интерфейсов не нужен. Это импорт из сторонних API/фидов, а не endpoint приёма партнёрских вакансий. Для другого формата/API нужен отдельный `JobProvider`; вставка произвольного URL не создаёт адаптер автоматически.
+
+`sources.europe.json` — каталог 32 включённых источников европейских и международных работодателей с присутствием в Европе (проверен 2026-10-08). Он дополняет три начальных источника, не заменяя их. Импортируется весь публичный board, в том числе вакансии за пределами Европы. Количество позиций меняется, статических вакансий/счётчиков в каталоге нет. Фильтр Europe работает по фактическим данным вакансии; страна не выводится из адреса головного офиса. Доступность API не является подтверждением лицензии на перепубликацию: условия использования данных определяет работодатель/провайдер.
+
+```sh
+# Из backend/ после build и db:migrate:
+npm run sources:import -- sources.europe.json
+npm run sync
+# Или из корня при Docker backend:
+docker compose exec -T api node dist/src/cli.js sources sources.europe.json
+docker compose exec -T api node dist/src/cli.js sync
+```
+
+Примеры в `sources.example.json` выключены по умолчанию; каталог `sources.europe.json` включён явно. Реальные вакансии не включены в seed. Чтобы поставить в очередь один источник: `npm run sync -- SOURCE_ID`. Worker должен работать, иначе задания остаются в Redis. В Docker CLI доступна через `docker compose exec api node dist/src/cli.js sync` (для JSON используйте файл внутри контейнера).
 
 ## API
 
@@ -78,8 +100,11 @@ npm run sync
 
 ## Импорт и защита данных
 
-- Три адаптера реализуют `JobProvider`; сетевые ответы проходят проверку формы, нормализацию и общую валидацию. Ошибка любой записи отклоняет снимок целиком, сохраняя предыдущие данные.
+- Шесть адаптеров реализуют `JobProvider`; `providers/http.ts` ограничивает сетевые ответы, `source-config.ts` проверяет provider-specific identifiers одинаково в CLI, admin и адаптерах. Ошибка любой записи отклоняет снимок целиком, сохраняя предыдущие данные.
+- Полные списки локаций сохраняются до 5000 символов (также в owner editor). Nullable `workplaceType`, `isRemote` и `address` в Ashby допустимы: отсутствующие сведения остаются неизвестными.
 - Greenhouse проверяет `meta.total`, Lever читает все страницы (включая EU instance), Ashby импортирует только `isListed: true`. Ограничения: 20 MB на ответ, 20 секунд на запрос, максимум 20000 записей; достижение лимита Lever считается ошибкой, а не полным снимком.
+- SmartRecruiters проверяет `offset`, стабильность `totalFound` и уникальность ID на всех страницах по 100. Полные описания загружаются отдельно, последовательно, с паузой 250 ms между запросами; при двух worker jobs это не более 8 запросов/s суммарно. Неверный ID/компания, неактивная вакансия или ошибка detail отменяют снимок. URL `ref` из ответа не используется для запросов. Импорт ограничен 30 минутами для больших boards; до записи удерживается только advisory lock, не блокирующий публичное чтение. Owner-редактирование вакансий этого источника в это время возвращает 409.
+- Personio/Recruitee используют XML с проверкой синтаксиса/корневого элемента, запретом DOCTYPE/ENTITY и отключённым расширением entities. Фиксированные hosts и запрет redirects исключают произвольные запросы из identifier. Пустой валидный корень — пустой снимок, HTML/error payload не считается пустым board. Стандартные XML entities декодируются без DTD. Personio `createdAt` не подставляется как дата публикации; Recruitee использует `published_at`. Recruitee выбран именно XML: объявленное требование токена для Careers JSON API с 10 февраля 2027 не относится к XML feed.
 - Внешний HTML преобразуется в текст. API не выдаёт HTML для прямой вставки. Категория и явно указанная старшинство определяются по заголовку; неподтверждённые значения остаются Other/null. Remote/Hybrid берутся из структурного поля либо явного указания в location. География из описания не угадывается.
 - Сравниваются только структурированные годовые зарплаты. Часовые ставки, бонусы и equity не превращаются в годовые суммы. Неизвестные поля остаются null.
 - Дедупликация — уникальный `(sourceId, externalId)`; slug создаётся один раз с устойчивым хешем и сохраняется при переименовании. Cross-source fuzzy matching отсутствует.
@@ -110,7 +135,7 @@ npm run test:integration
 
 Prisma Client генерируется при build и не хранится в git. Миграции хранятся в git и применяются через `migrate deploy`. Зафиксированы overrides для исправленных `deepmerge-ts` и `mysql2`, используемых Prisma CLI; совместимость проверяется генерацией клиента и миграциями.
 
-Официальные спецификации: [Greenhouse Job Board API](https://docs.greenhouse.io/job-board.html), [Lever Postings API](https://github.com/lever/postings-api), [Ashby Public Job Posting API](https://developers.ashbyhq.com/docs/public-job-posting-api), [BullMQ schedulers](https://docs.bullmq.io/guide/job-schedulers).
+Официальные спецификации: [Greenhouse Job Board API](https://docs.greenhouse.io/job-board.html), [Lever Postings API](https://github.com/lever/postings-api), [Ashby Public Job Posting API](https://developers.ashbyhq.com/docs/public-job-posting-api), [SmartRecruiters Posting API](https://developers.smartrecruiters.com/docs/endpoints), [Personio XML](https://support.personio.de/hc/en-us/articles/207576365-Integrate-jobs-from-Personio-into-your-website-via-XML), [Recruitee XML feeds](https://support.recruitee.com/en/articles/8213076-faq-api), [Recruitee authentication changes](https://docs.recruitee.com/reference/authentication-1), [BullMQ schedulers](https://docs.bullmq.io/guide/job-schedulers).
 
 
 ## Owner API и аналитика

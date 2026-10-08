@@ -25,6 +25,7 @@
     "bullmq": "6.3.11",
     "dotenv": "^17.2.0",
     "entities": "^7.0.0",
+    "fast-xml-parser": "5.11.2",
     "html-to-text": "^9.0.5",
     "ioredis": "^5.11.1",
     "pg": "^8.16.0",

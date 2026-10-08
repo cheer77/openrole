@@ -100,7 +100,7 @@ test("owner workspace protects access, manages records and fits mobile", async (
   await page.getByRole("option", { name: companyName, exact: true }).click();
   await selectOption(
     dialog.getByRole("combobox", { name: "Provider" }),
-    "ASHBY",
+    "PERSONIO",
   );
   await dialog.getByLabel("Source identifier").fill("fixture-" + suffix);
   await dialog.getByRole("button", { name: "Save changes" }).click();

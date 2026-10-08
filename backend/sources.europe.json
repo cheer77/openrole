@@ -1,0 +1,354 @@
+[
+  {
+    "name": "Adyen public board",
+    "type": "GREENHOUSE",
+    "sourceIdentifier": "adyen",
+    "enabled": true,
+    "company": {
+      "name": "Adyen",
+      "slug": "adyen",
+      "careerUrl": "https://job-boards.greenhouse.io/adyen"
+    }
+  },
+  {
+    "name": "Wolt public board",
+    "type": "GREENHOUSE",
+    "sourceIdentifier": "wolt",
+    "enabled": true,
+    "company": {
+      "name": "Wolt",
+      "slug": "wolt",
+      "careerUrl": "https://job-boards.greenhouse.io/wolt"
+    }
+  },
+  {
+    "name": "Deliveroo public board",
+    "type": "GREENHOUSE",
+    "sourceIdentifier": "deliveroo",
+    "enabled": true,
+    "company": {
+      "name": "Deliveroo",
+      "slug": "deliveroo",
+      "careerUrl": "https://job-boards.greenhouse.io/deliveroo"
+    }
+  },
+  {
+    "name": "HelloFresh public board",
+    "type": "GREENHOUSE",
+    "sourceIdentifier": "hellofresh",
+    "enabled": true,
+    "company": {
+      "name": "HelloFresh",
+      "slug": "hellofresh",
+      "careerUrl": "https://job-boards.greenhouse.io/hellofresh"
+    }
+  },
+  {
+    "name": "N26 public board",
+    "type": "GREENHOUSE",
+    "sourceIdentifier": "n26",
+    "enabled": true,
+    "company": {
+      "name": "N26",
+      "slug": "n26",
+      "careerUrl": "https://job-boards.greenhouse.io/n26"
+    }
+  },
+  {
+    "name": "Monzo public board",
+    "type": "GREENHOUSE",
+    "sourceIdentifier": "monzo",
+    "enabled": true,
+    "company": {
+      "name": "Monzo",
+      "slug": "monzo",
+      "careerUrl": "https://job-boards.greenhouse.io/monzo"
+    }
+  },
+  {
+    "name": "Canonical public board",
+    "type": "GREENHOUSE",
+    "sourceIdentifier": "canonical",
+    "enabled": true,
+    "company": {
+      "name": "Canonical",
+      "slug": "canonical",
+      "careerUrl": "https://job-boards.greenhouse.io/canonical"
+    }
+  },
+  {
+    "name": "Grafana Labs public board",
+    "type": "GREENHOUSE",
+    "sourceIdentifier": "grafanalabs",
+    "enabled": true,
+    "company": {
+      "name": "Grafana Labs",
+      "slug": "grafana-labs",
+      "careerUrl": "https://job-boards.greenhouse.io/grafanalabs"
+    }
+  },
+  {
+    "name": "GitLab public board",
+    "type": "GREENHOUSE",
+    "sourceIdentifier": "gitlab",
+    "enabled": true,
+    "company": {
+      "name": "GitLab",
+      "slug": "gitlab",
+      "careerUrl": "https://job-boards.greenhouse.io/gitlab"
+    }
+  },
+  {
+    "name": "Elastic public board",
+    "type": "GREENHOUSE",
+    "sourceIdentifier": "elastic",
+    "enabled": true,
+    "company": {
+      "name": "Elastic",
+      "slug": "elastic",
+      "careerUrl": "https://job-boards.greenhouse.io/elastic"
+    }
+  },
+  {
+    "name": "Doctolib public board",
+    "type": "GREENHOUSE",
+    "sourceIdentifier": "doctolib",
+    "enabled": true,
+    "company": {
+      "name": "Doctolib",
+      "slug": "doctolib",
+      "careerUrl": "https://job-boards.greenhouse.io/doctolib"
+    }
+  },
+  {
+    "name": "SumUp public board",
+    "type": "GREENHOUSE",
+    "sourceIdentifier": "sumup",
+    "enabled": true,
+    "company": {
+      "name": "SumUp",
+      "slug": "sumup",
+      "careerUrl": "https://job-boards.greenhouse.io/sumup"
+    }
+  },
+  {
+    "name": "Contentful public board",
+    "type": "GREENHOUSE",
+    "sourceIdentifier": "contentful",
+    "enabled": true,
+    "company": {
+      "name": "Contentful",
+      "slug": "contentful",
+      "careerUrl": "https://job-boards.greenhouse.io/contentful"
+    }
+  },
+  {
+    "name": "Datadog public board",
+    "type": "GREENHOUSE",
+    "sourceIdentifier": "datadog",
+    "enabled": true,
+    "company": {
+      "name": "Datadog",
+      "slug": "datadog",
+      "careerUrl": "https://job-boards.greenhouse.io/datadog"
+    }
+  },
+  {
+    "name": "Cloudflare public board",
+    "type": "GREENHOUSE",
+    "sourceIdentifier": "cloudflare",
+    "enabled": true,
+    "company": {
+      "name": "Cloudflare",
+      "slug": "cloudflare",
+      "careerUrl": "https://job-boards.greenhouse.io/cloudflare"
+    }
+  },
+  {
+    "name": "MongoDB public board",
+    "type": "GREENHOUSE",
+    "sourceIdentifier": "mongodb",
+    "enabled": true,
+    "company": {
+      "name": "MongoDB",
+      "slug": "mongodb",
+      "careerUrl": "https://job-boards.greenhouse.io/mongodb"
+    }
+  },
+  {
+    "name": "GetYourGuide public board",
+    "type": "GREENHOUSE",
+    "sourceIdentifier": "getyourguide",
+    "enabled": true,
+    "company": {
+      "name": "GetYourGuide",
+      "slug": "getyourguide",
+      "careerUrl": "https://job-boards.greenhouse.io/getyourguide"
+    }
+  },
+  {
+    "name": "Celonis public board",
+    "type": "GREENHOUSE",
+    "sourceIdentifier": "celonis",
+    "enabled": true,
+    "company": {
+      "name": "Celonis",
+      "slug": "celonis",
+      "careerUrl": "https://job-boards.greenhouse.io/celonis"
+    }
+  },
+  {
+    "name": "BlaBlaCar public board",
+    "type": "LEVER",
+    "sourceIdentifier": "blablacar",
+    "enabled": true,
+    "company": {
+      "name": "BlaBlaCar",
+      "slug": "blablacar",
+      "careerUrl": "https://jobs.lever.co/blablacar"
+    }
+  },
+  {
+    "name": "Qonto public board",
+    "type": "LEVER",
+    "sourceIdentifier": "qonto",
+    "enabled": true,
+    "company": {
+      "name": "Qonto",
+      "slug": "qonto",
+      "careerUrl": "https://jobs.lever.co/qonto"
+    }
+  },
+  {
+    "name": "DeepL public board",
+    "type": "ASHBY",
+    "sourceIdentifier": "deepl",
+    "enabled": true,
+    "company": {
+      "name": "DeepL",
+      "slug": "deepl",
+      "careerUrl": "https://jobs.ashbyhq.com/deepl"
+    }
+  },
+  {
+    "name": "Linear public board",
+    "type": "ASHBY",
+    "sourceIdentifier": "linear",
+    "enabled": true,
+    "company": {
+      "name": "Linear",
+      "slug": "linear",
+      "careerUrl": "https://jobs.ashbyhq.com/linear"
+    }
+  },
+  {
+    "name": "ElevenLabs public board",
+    "type": "ASHBY",
+    "sourceIdentifier": "elevenlabs",
+    "enabled": true,
+    "company": {
+      "name": "ElevenLabs",
+      "slug": "elevenlabs",
+      "careerUrl": "https://jobs.ashbyhq.com/elevenlabs"
+    }
+  },
+  {
+    "name": "n8n public board",
+    "type": "ASHBY",
+    "sourceIdentifier": "n8n",
+    "enabled": true,
+    "company": {
+      "name": "n8n",
+      "slug": "n8n",
+      "careerUrl": "https://jobs.ashbyhq.com/n8n"
+    }
+  },
+  {
+    "name": "Lovable public board",
+    "type": "ASHBY",
+    "sourceIdentifier": "lovable",
+    "enabled": true,
+    "company": {
+      "name": "Lovable",
+      "slug": "lovable",
+      "careerUrl": "https://jobs.ashbyhq.com/lovable"
+    }
+  },
+  {
+    "name": "Personio public board",
+    "type": "PERSONIO",
+    "sourceIdentifier": "personio",
+    "enabled": true,
+    "company": {
+      "name": "Personio",
+      "slug": "personio",
+      "careerUrl": "https://personio.jobs.personio.com"
+    }
+  },
+  {
+    "name": "Tellent public board",
+    "type": "RECRUITEE",
+    "sourceIdentifier": "jobs",
+    "enabled": true,
+    "company": {
+      "name": "Tellent",
+      "slug": "tellent",
+      "careerUrl": "https://jobs.recruitee.com"
+    }
+  },
+  {
+    "name": "bunq public board",
+    "type": "RECRUITEE",
+    "sourceIdentifier": "bunq",
+    "enabled": true,
+    "company": {
+      "name": "bunq",
+      "slug": "bunq",
+      "careerUrl": "https://bunq.recruitee.com"
+    }
+  },
+  {
+    "name": "Believe public board",
+    "type": "SMARTRECRUITERS",
+    "sourceIdentifier": "Believe",
+    "enabled": true,
+    "company": {
+      "name": "Believe",
+      "slug": "believe",
+      "careerUrl": "https://careers.smartrecruiters.com/Believe"
+    }
+  },
+  {
+    "name": "Wise public board",
+    "type": "SMARTRECRUITERS",
+    "sourceIdentifier": "Wise",
+    "enabled": true,
+    "company": {
+      "name": "Wise",
+      "slug": "wise",
+      "careerUrl": "https://careers.smartrecruiters.com/Wise"
+    }
+  },
+  {
+    "name": "Version 1 public board",
+    "type": "SMARTRECRUITERS",
+    "sourceIdentifier": "Version1",
+    "enabled": true,
+    "company": {
+      "name": "Version 1",
+      "slug": "version-1",
+      "careerUrl": "https://careers.smartrecruiters.com/Version1"
+    }
+  },
+  {
+    "name": "Devoteam public board",
+    "type": "SMARTRECRUITERS",
+    "sourceIdentifier": "Devoteam",
+    "enabled": true,
+    "company": {
+      "name": "Devoteam",
+      "slug": "devoteam",
+      "careerUrl": "https://careers.smartrecruiters.com/Devoteam"
+    }
+  }
+]

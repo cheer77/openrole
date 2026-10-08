@@ -2,7 +2,11 @@ import { readFile } from "node:fs/promises";
 import { z } from "zod";
 import { createDb } from "./db.js";
 import { createQueue, enqueueSources } from "./queue.js";
-import { sourceIdentifierSchema } from "./providers/providers.js";
+import {
+  sourceIdentifierSchema,
+  importSourceTypes,
+  validSourceIdentifier,
+} from "./providers/source-config.js";
 import { httpUrl } from "./providers/normalize.js";
 
 const sourcesSchema = z
@@ -10,7 +14,7 @@ const sourcesSchema = z
     z
       .object({
         name: z.string().trim().min(1).max(150),
-        type: z.enum(["GREENHOUSE", "LEVER", "ASHBY", "MANUAL"]),
+        type: z.enum([...importSourceTypes, "MANUAL"]),
         sourceIdentifier: sourceIdentifierSchema,
         enabled: z.boolean(),
         company: z
@@ -24,7 +28,8 @@ const sourcesSchema = z
           })
           .strict(),
       })
-      .strict(),
+      .strict()
+      .refine(validSourceIdentifier, "Invalid identifier for this provider"),
   )
   .max(500);
 
@@ -38,34 +43,39 @@ async function main() {
       const sources = sourcesSchema.parse(
         JSON.parse(await readFile(argument, "utf8")),
       );
-      await db.$transaction(async (tx) => {
-        for (const source of sources) {
-          const company = await tx.company.upsert({
-            where: { slug: source.company.slug },
-            create: source.company,
-            update: source.company,
-          });
-          const key = {
-            type: source.type,
-            sourceIdentifier: source.sourceIdentifier,
-          };
-          const existing = await tx.source.findUnique({
-            where: { type_sourceIdentifier: key },
-          });
-          if (existing && existing.companyId !== company.id)
-            throw new Error("A source cannot be reassigned to another company");
-          await tx.source.upsert({
-            where: { type_sourceIdentifier: key },
-            create: {
-              ...key,
-              name: source.name,
-              enabled: source.enabled,
-              companyId: company.id,
-            },
-            update: { name: source.name, enabled: source.enabled },
-          });
-        }
-      });
+      await db.$transaction(
+        async (tx) => {
+          for (const source of sources) {
+            const company = await tx.company.upsert({
+              where: { slug: source.company.slug },
+              create: source.company,
+              update: source.company,
+            });
+            const key = {
+              type: source.type,
+              sourceIdentifier: source.sourceIdentifier,
+            };
+            const existing = await tx.source.findUnique({
+              where: { type_sourceIdentifier: key },
+            });
+            if (existing && existing.companyId !== company.id)
+              throw new Error(
+                "A source cannot be reassigned to another company",
+              );
+            await tx.source.upsert({
+              where: { type_sourceIdentifier: key },
+              create: {
+                ...key,
+                name: source.name,
+                enabled: source.enabled,
+                companyId: company.id,
+              },
+              update: { name: source.name, enabled: source.enabled },
+            });
+          }
+        },
+        { timeout: 30000 },
+      );
       console.log(`Imported ${sources.length} source configurations`);
     } else if (command === "sync") {
       const queue = createQueue();

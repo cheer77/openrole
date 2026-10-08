@@ -21,7 +21,7 @@ export const normalizedJobSchema = z
     description: z.string().min(1).max(200000),
     shortDescription: z.string().max(300),
     category: z.string(),
-    location: z.string().max(1000),
+    location: z.string().max(5000),
     city: z.string().nullable(),
     country: z.string().nullable(),
     region: z.string().nullable(),

@@ -129,7 +129,9 @@ export async function syncSource(
         });
         return { found: jobs.length, created, updated, closed: closed.count };
       },
-      { maxWait: 5000, timeout: 300000 },
+      // Detail-based APIs need time to respect rate limits on large boards.
+      // Only two imports run at once; the advisory lock does not block public reads.
+      { maxWait: 5000, timeout: 1800000 },
     );
     await db.importLog.update({
       where: { id: log.id },
