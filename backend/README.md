@@ -126,3 +126,12 @@ Prisma Client генерируется при build и не хранится в 
 - Rate limits в памяти одного процесса: login 10/5 минут, события 2000/минуту глобально и 90/минуту на session, sync 20/минуту. Перед масштабированием API лимиты следует перенести в Redis. API не должен публиковать внутренний ключ.
 
 E2E использует отдельную test DB и Redis DB 15, без рабочего worker. Не запускайте backend integration и frontend E2E одновременно.
+
+
+### Данные центрального графика
+
+`GET /admin/dashboard` дополнительно возвращает `chart` из `src/chart-analytics.ts`: `granularity`, `currentPeriod {start,end,metrics}`, `previousPeriod {start,end,available,metrics}`, `series [{timestamp,visitors,pageViews,jobViews,applyClicks,applyConversion,jobViewers,applyUsers,future,partial}]`. Один дополнительный SQL-запрос ограничен индексируемыми временными окнами; существующие KPI и таблицы не менялись.
+
+Apply conversion использует пересечение уникальных job viewers и Apply users в том же временном окне / уникальных job viewers × 100. Повторные клики не увеличивают конверсию; события Apply без просмотра в окне остаются в счётчике кликов. При отсутствии job viewers конверсия `null`. Summary дедуплицируется за весь период, независимо от суммы дневных/часовых точек.
+
+Today/Yesterday возвращают 24 почасовых слота, 7/30/90 — дневные. Будущие часы имеют `future`, текущий неполный интервал — `partial`. Сравнение сдвигает обе границы на 1/7/30/90 календарных дней UTC, сохраняя равную длительность; для Today это вчера до того же времени. Если предыдущий период выходит за 90-дневное хранение, `available=false`, `metrics=null`; отсутствующие исторические данные не выдаются за нулевые.

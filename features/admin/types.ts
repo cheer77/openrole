@@ -1,3 +1,29 @@
+export interface ChartMetrics {
+  visitors: number;
+  pageViews: number;
+  jobViews: number;
+  applyClicks: number;
+  applyConversion: number | null;
+  jobViewers: number;
+  applyUsers: number;
+}
+export type ChartMetric =
+  "visitors" | "pageViews" | "jobViews" | "applyClicks" | "applyConversion";
+export interface TrafficChartData {
+  granularity: "hour" | "day";
+  currentPeriod: { start: string; end: string; metrics: ChartMetrics };
+  previousPeriod: {
+    start: string;
+    end: string;
+    available: boolean;
+    metrics: ChartMetrics | null;
+  };
+  series: (ChartMetrics & {
+    timestamp: string;
+    future: boolean;
+    partial: boolean;
+  })[];
+}
 export interface Metrics {
   visitors: number;
   sessions: number;
@@ -15,6 +41,7 @@ export interface TopJob {
   ctr: number;
 }
 export interface Report {
+  chart: TrafficChartData;
   range: string;
   start: string;
   end: string;

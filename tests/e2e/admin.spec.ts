@@ -40,7 +40,7 @@ test("owner workspace protects access, manages records and fits mobile", async (
   );
   await page.getByRole("button", { name: "Apply clicks", exact: true }).click();
   await expect(
-    page.getByRole("img", { name: "Apply clicks over the selected period" }),
+    page.getByRole("heading", { name: "Traffic & engagement" }),
   ).toBeVisible();
   await page.screenshot({
     path: `test-results/admin-dashboard-${suffix}.png`,
@@ -264,6 +264,8 @@ test("dashboard refresh is quiet, pauses when inactive and backs off on errors",
     const response = await route.fetch();
     const data = await response.json();
     data.summary.visitors = requests;
+    data.chart.currentPeriod.metrics.visitors = requests;
+    data.chart.series[0].visitors = requests;
     await route.fulfill({ json: data });
   });
   await page.goto("/admin/login");
@@ -272,7 +274,7 @@ test("dashboard refresh is quiet, pauses when inactive and backs off on errors",
   const value = page.locator(".admin-kpi").first().locator("strong");
   await expect(value).toHaveText("1");
   const chart = page.getByRole("img", {
-    name: "Visitors over the selected period",
+    name: "Traffic and engagement over the selected period",
   });
   await chart.evaluate((element) =>
     element.setAttribute("data-preserved", "yes"),
@@ -357,4 +359,225 @@ test("dashboard refresh is quiet, pauses when inactive and backs off on errors",
   ).toBeVisible();
   await page.clock.runFor(120000);
   expect(requests).toBe(6);
+});
+
+test("traffic chart compares multiple series, conversion and hourly/daily ranges without extra requests", async ({
+  page,
+  context,
+}, info) => {
+  let requests = 0;
+  let empty = false;
+  let sparse = false;
+  await page.route("**/api/admin/dashboard?*", async (route) => {
+    requests++;
+    const response = await route.fetch();
+    const data = await response.json();
+    const range = new URL(route.request().url()).searchParams.get("range")!;
+    const hourly = range === "today" || range === "yesterday";
+    const size = hourly ? 24 : Number(range);
+    const end = new Date("2035-10-07T12:30:00Z");
+    const start = new Date("2035-10-07T00:00:00Z");
+    start.setUTCDate(
+      start.getUTCDate() - (range === "yesterday" ? 1 : hourly ? 0 : size - 1),
+    );
+    const current = {
+      visitors: empty ? 0 : 12,
+      pageViews: empty ? 0 : 40,
+      jobViews: empty ? 0 : 24,
+      applyClicks: empty ? 0 : 8,
+      applyConversion: empty ? null : 25,
+      jobViewers: empty ? 0 : 8,
+      applyUsers: empty ? 0 : 2,
+    };
+    data.chart = {
+      granularity: hourly ? "hour" : "day",
+      currentPeriod: {
+        start: start.toISOString(),
+        end: end.toISOString(),
+        metrics: current,
+      },
+      previousPeriod: {
+        start: "2035-09-24T00:00:00Z",
+        end: "2035-09-30T12:30:00Z",
+        available: range !== "90",
+        metrics:
+          range === "90"
+            ? null
+            : {
+                ...current,
+                visitors: empty ? 0 : 10,
+                pageViews: empty ? 0 : 80,
+                applyConversion: empty ? null : 20,
+              },
+      },
+      series: Array.from({ length: size }, (_, i) => ({
+        ...current,
+        timestamp: new Date(
+          start.getTime() + i * (hourly ? 3600000 : 86400000),
+        ).toISOString(),
+        future: range === "today" && i > 12,
+        partial:
+          range === "today"
+            ? i === 12
+            : range !== "yesterday" && i === size - 1,
+        visitors: empty ? 0 : (i % 4) + 1,
+        jobViews: empty ? 0 : (i % 7) + 1,
+        applyClicks: empty ? 0 : i % 3,
+        pageViews: empty ? 0 : (i % 8) + 4,
+        applyConversion: empty ? null : i % 2 ? 25 : 0,
+      })),
+    };
+    if (sparse && !empty) {
+      data.chart.currentPeriod.metrics = {
+        visitors: 2,
+        pageViews: 2,
+        jobViews: 2,
+        applyClicks: 3,
+        applyConversion: 50,
+        jobViewers: 2,
+        applyUsers: 1,
+      };
+      data.chart.series = data.chart.series.map(
+        (point: Record<string, unknown>, index: number) => ({
+          ...point,
+          visitors: index === 12 ? 2 : 0,
+          pageViews: index === 12 ? 2 : 0,
+          jobViews: index === 12 ? 2 : 0,
+          applyClicks: index === 12 ? 3 : 0,
+          applyConversion: index === 12 ? 50 : null,
+          jobViewers: index === 12 ? 2 : 0,
+          applyUsers: index === 12 ? 1 : 0,
+        }),
+      );
+    }
+    await route.fulfill({ json: data });
+  });
+  await context.addCookies([
+    {
+      name: "openrole-owner",
+      value: "a".repeat(64),
+      url: "http://127.0.0.1:3100",
+      httpOnly: true,
+      sameSite: "Strict",
+    },
+  ]);
+  await page.goto("/admin");
+  const chart = page.getByRole("region", {
+    name: "Traffic and engagement",
+    exact: true,
+  });
+  await expect(
+    chart.getByRole("heading", { name: "Traffic & engagement" }),
+  ).toBeVisible();
+  const controls = chart.getByRole("group", { name: "Chart metrics" });
+  for (const name of ["Visitors", "Job views", "Apply clicks"])
+    await expect(
+      controls.getByRole("button", { name, exact: true }),
+    ).toHaveAttribute("aria-pressed", "true");
+  const initialRequests = requests;
+  await controls
+    .getByRole("button", { name: "Page views", exact: true })
+    .click();
+  await controls
+    .getByRole("button", { name: "Conversion", exact: true })
+    .click();
+  await expect(chart.locator("[data-series]")).toHaveCount(5);
+  await expect(
+    chart.locator("svg").getByText("Conversion %", { exact: true }),
+  ).toBeVisible();
+  await expect(chart.getByText("+20.0%", { exact: false })).toBeVisible();
+  await expect(chart.getByText("−50.0%", { exact: false })).toBeVisible();
+  await expect(chart.getByText("+5.0 pp", { exact: false })).toBeVisible();
+  const interaction = chart.getByRole("group", {
+    name: "Explore traffic chart",
+  });
+  await interaction.focus();
+  await page.keyboard.press("Home");
+  await page.keyboard.press("ArrowRight");
+  await expect(chart.getByRole("status")).toContainText("25.0%");
+  await expect(chart.getByRole("status")).toContainText("Page views");
+  await interaction.hover({ position: { x: 120, y: 120 } });
+  await expect(chart.locator(".traffic-chart-guide")).toHaveCount(1);
+  expect(requests).toBe(initialRequests);
+  for (const width of [320, 768, 1440]) {
+    await page.setViewportSize({ width, height: 1000 });
+    await expect
+      .poll(() =>
+        page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+      )
+      .toBe(true);
+    await interaction.focus();
+    await page.keyboard.press("End");
+    await expect
+      .poll(() =>
+        chart.locator(".traffic-chart-tooltip").evaluate((el) => {
+          const r = el.getBoundingClientRect();
+          return r.left >= 0 && r.right <= innerWidth;
+        }),
+      )
+      .toBe(true);
+  }
+  await chart.screenshot({
+    path: `test-results/traffic-chart-${info.project.name}.png`,
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await chart.screenshot({
+    path: `test-results/traffic-chart-mobile-${info.project.name}.png`,
+  });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await chart.getByText("View chart data", { exact: true }).click();
+  await expect(chart.locator("tbody tr")).toHaveCount(7);
+  const range = page.getByRole("combobox", { name: "Analytics date range" });
+  for (const [value, length] of [
+    ["today", 24],
+    ["yesterday", 24],
+    ["30", 30],
+    ["90", 90],
+    ["7", 7],
+  ] as const) {
+    await selectOption(range, value);
+    await expect(chart.locator("tbody tr")).toHaveCount(length);
+    await expect(
+      chart.getByText(
+        value === "today" || value === "yesterday"
+          ? "Hourly activity"
+          : "Daily activity",
+        { exact: false },
+      ),
+    ).toBeVisible();
+    if (value === "today") {
+      await expect(chart.locator("tbody")).toContainText("23:00");
+      await expect(chart.locator("tbody")).toContainText("Not elapsed");
+    }
+    if (value === "90")
+      await expect(
+        chart.getByText("Comparison unavailable", { exact: false }),
+      ).toBeVisible();
+  }
+  for (const name of ["Visitors", "Page views", "Job views", "Apply clicks"])
+    await controls.getByRole("button", { name, exact: true }).click();
+  await expect(chart.locator("[data-series]")).toHaveCount(1);
+  await expect(
+    chart.locator("svg").getByText("Count", { exact: true }),
+  ).toHaveCount(0);
+  sparse = true;
+  await selectOption(range, "30");
+  await expect(
+    chart.locator('[data-series="applyConversion"] circle'),
+  ).toHaveCount(1);
+  await interaction.focus();
+  await page.keyboard.press("Home");
+  for (let i = 0; i < 12; i++) await page.keyboard.press("ArrowRight");
+  await expect(chart.getByRole("status")).toContainText("50.0%");
+  await controls
+    .getByRole("button", { name: "Conversion", exact: true })
+    .click();
+  await expect(chart.getByRole("status")).toContainText("Select a metric");
+  await controls.getByRole("button", { name: "Visitors", exact: true }).click();
+  empty = true;
+  await selectOption(range, "7");
+  await expect(chart.getByRole("status")).toContainText(
+    "No analytics data for this period yet.",
+  );
+  await expect(chart.locator("svg")).toHaveCount(0);
 });

@@ -1,3 +1,4 @@
+import { trafficChart } from "./chart-analytics.js";
 import { z } from "zod";
 import { Prisma, type PrismaClient } from "./generated/prisma/client.js";
 export const eventSchema = z
@@ -107,8 +108,12 @@ const withCtr = <T extends { jobViews: number; applyClicks: number }>(
     ? Math.round((row.applyClicks / row.jobViews) * 1000) / 10
     : 0,
 });
-export async function analyticsReport(db: PrismaClient, range: string) {
-  const { start, end, bucket } = dateRange(range);
+export async function analyticsReport(
+  db: PrismaClient,
+  range: string,
+  now = new Date(),
+) {
+  const { start, end, bucket } = dateRange(range, now);
   const window = Prisma.sql`"occurredAt" >= ${start} AND "occurredAt" < ${end}`;
   const [
     summary,
@@ -124,6 +129,7 @@ export async function analyticsReport(db: PrismaClient, range: string) {
     jobs,
     inventory,
     recentVisitors,
+    chart,
   ] = await Promise.all([
     db.$queryRaw<Metrics[]>(
       Prisma.sql`SELECT ${metrics} FROM "AnalyticsEvent" WHERE ${window}`,
@@ -198,6 +204,7 @@ export async function analyticsReport(db: PrismaClient, range: string) {
         return result[0].count;
       }),
     ),
+    trafficChart(db, range, start, end, bucket, now),
   ]);
   const slots: (Metrics & { date: string })[] = [];
   for (
@@ -222,6 +229,7 @@ export async function analyticsReport(db: PrismaClient, range: string) {
   }
   const ranked = jobs.map(withCtr);
   return {
+    chart,
     range,
     start,
     end,

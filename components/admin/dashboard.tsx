@@ -2,12 +2,18 @@
 import { useState } from "react";
 import { Select } from "@/components/select";
 import { useAdminData } from "@/features/admin/use-admin-data";
-import type { Report, Metrics, TopJob } from "@/features/admin/types";
-import { TrendChart, WorldMap, countryName } from "./charts";
+import type { Report, TopJob, ChartMetric } from "@/features/admin/types";
+import { WorldMap, countryName } from "./charts";
+import { TrendChart } from "./trend-chart";
 const n = (v: number) => v.toLocaleString("en-US");
 export function Dashboard() {
+  const [chartMetrics, setChartMetrics] = useState<ChartMetric[]>([
+    "visitors",
+    "jobViews",
+    "applyClicks",
+  ]);
+  const [chartTableOpen, setChartTableOpen] = useState(false);
   const [range, setRange] = useState("7");
-  const [metric, setMetric] = useState<keyof Metrics>("visitors");
   const [revision, setRevision] = useState(0);
   const { data, error, loading } = useAdminData<Report>(
     "dashboard?range=" + range,
@@ -123,36 +129,13 @@ export function Dashboard() {
               Last 30 days <strong>{n(data.visitorsMonth)}</strong>
             </span>
           </div>
-          <section className="admin-panel">
-            <div
-              className="admin-chart-tabs"
-              role="group"
-              aria-label="Chart metric"
-            >
-              {(["visitors", "jobViews", "applyClicks", "ctr"] as const).map(
-                (key) => (
-                  <button
-                    key={key}
-                    aria-pressed={metric === key}
-                    onClick={() => setMetric(key)}
-                  >
-                    {labels[key]}
-                  </button>
-                ),
-              )}
-            </div>
-            <TrendChart
-              data={data.series}
-              metric={metric}
-              label={labels[metric]}
-            />
-            {!data.summary.pageViews && (
-              <p className="admin-muted">
-                No traffic recorded for this period yet. The chart will fill as
-                people browse the site.
-              </p>
-            )}
-          </section>
+          <TrendChart
+            data={data.chart}
+            enabled={chartMetrics}
+            onEnabledChange={setChartMetrics}
+            tableOpen={chartTableOpen}
+            onTableOpenChange={setChartTableOpen}
+          />
           <section className="admin-inventory" aria-label="Job board inventory">
             {Object.entries({
               totalJobs: "Total jobs",
@@ -361,22 +344,24 @@ function TopJobs({
   note?: string;
 }) {
   return (
-    <section className="admin-panel">
+    <section className="admin-panel admin-top-jobs">
       <h2>{title}</h2>
       {note && <p>{note}</p>}
-      <ol className="top-jobs">
-        {jobs.map((job) => (
-          <li key={job.id}>
-            <strong>{job.title}</strong>
-            <span>{job.company}</span>
-            <div>
-              <small>{n(job.jobViews)} views</small>
-              <small>{n(job.applyClicks)} clicks</small>
-              <b>{job.ctr}%</b>
-            </div>
-          </li>
-        ))}
-      </ol>
+      {jobs.length > 0 && (
+        <ol className="top-jobs" tabIndex={0} aria-label={`${title} list`}>
+          {jobs.map((job) => (
+            <li key={job.id}>
+              <strong>{job.title}</strong>
+              <span>{job.company}</span>
+              <div>
+                <small>{n(job.jobViews)} views</small>
+                <small>{n(job.applyClicks)} clicks</small>
+                <b>{job.ctr}%</b>
+              </div>
+            </li>
+          ))}
+        </ol>
+      )}
       {!jobs.length && <p className="admin-muted">Not enough activity yet.</p>}
     </section>
   );

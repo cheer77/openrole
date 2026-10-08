@@ -15,7 +15,7 @@ const { createDb } = await import("../../src/db.js");
 const { createApp } = await import("../../src/app.js");
 const { syncSource } = await import("../../src/sync.js");
 const { normalize } = await import("../../src/providers/normalize.js");
-const { retainData } = await import("../../src/analytics.js");
+const { retainData, analyticsReport } = await import("../../src/analytics.js");
 const { sessionHash } = await import("../../src/admin-auth.js");
 
 test("owner authentication, management, import overrides and private analytics", async (t) => {
@@ -329,6 +329,79 @@ test("owner authentication, management, import overrides and private analytics",
           ),
         );
         assert.equal(await db.analyticsEvent.count(), 4);
+      },
+    );
+    await t.test(
+      "chart deduplicates conversion and compares equivalent hourly/daily periods",
+      async () => {
+        const sessionId = randomUUID();
+        const a = randomUUID(),
+          b = randomUUID(),
+          orphan = randomUUID();
+        const now = new Date("2035-10-07T12:30:00Z");
+        const event = (visitorId: string, type: string, at: string) => ({
+          id: randomUUID(),
+          visitorId,
+          sessionId,
+          type,
+          path: "/",
+          occurredAt: new Date(at),
+          trafficSource: "Direct",
+          device: "Desktop",
+          browser: "Other",
+          os: "Other",
+        });
+        await db.analyticsEvent.createMany({
+          data: [
+            event(a, "JOB_VIEW", "2035-09-28T10:00:00Z"),
+            event(a, "JOB_VIEW", "2035-10-06T10:00:00Z"),
+            ...[1, 2, 3].map(() =>
+              event(a, "APPLY_CLICK", "2035-10-06T10:10:00Z"),
+            ),
+            event(a, "JOB_VIEW", "2035-10-07T10:00:00Z"),
+            event(b, "JOB_VIEW", "2035-10-07T10:05:00Z"),
+            event(orphan, "APPLY_CLICK", "2035-10-07T10:10:00Z"),
+            event(b, "PAGE_VIEW", "2035-10-07T15:00:00Z"),
+          ],
+        });
+        try {
+          const week = (await analyticsReport(db, "7", now)).chart;
+          assert.equal(week.granularity, "day");
+          assert.equal(week.series.length, 7);
+          assert.equal(week.currentPeriod.metrics.visitors, 3);
+          assert.equal(week.currentPeriod.metrics.jobViews, 3);
+          assert.equal(week.currentPeriod.metrics.applyClicks, 4);
+          assert.equal(week.currentPeriod.metrics.jobViewers, 2);
+          assert.equal(week.currentPeriod.metrics.applyUsers, 1);
+          assert.equal(week.currentPeriod.metrics.applyConversion, 50);
+          assert.equal(week.previousPeriod.metrics?.jobViews, 1);
+          assert.equal(week.series[5].applyConversion, 100);
+          assert.equal(week.series[6].applyConversion, 0);
+          assert.equal(week.series[0].applyConversion, null);
+          const today = (await analyticsReport(db, "today", now)).chart;
+          assert.equal(today.series.length, 24);
+          assert.equal(today.granularity, "hour");
+          assert.equal(today.series[12].partial, true);
+          assert.equal(today.series[13].future, true);
+          assert.equal(today.currentPeriod.metrics.pageViews, 0);
+          assert.equal(
+            today.previousPeriod.end.toISOString(),
+            "2035-10-06T12:30:00.000Z",
+          );
+          assert.equal(today.previousPeriod.metrics?.applyConversion, 100);
+          const yesterday = (await analyticsReport(db, "yesterday", now)).chart;
+          assert.equal(yesterday.series.length, 24);
+          assert.ok(yesterday.series.every((p) => !p.future && !p.partial));
+          const month = (await analyticsReport(db, "30", now)).chart;
+          assert.equal(month.series.length, 30);
+          assert.equal(month.granularity, "day");
+          const quarter = (await analyticsReport(db, "90", now)).chart;
+          assert.equal(quarter.series.length, 90);
+          assert.equal(quarter.previousPeriod.available, false);
+          assert.equal(quarter.previousPeriod.metrics, null);
+        } finally {
+          await db.analyticsEvent.deleteMany({ where: { sessionId } });
+        }
       },
     );
     await t.test(
