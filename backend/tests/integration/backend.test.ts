@@ -231,6 +231,20 @@ test("PostgreSQL synchronization and API regression", async (t) => {
       },
     );
 
+    await t.test("source HTML reaches detail API while listing and search keep plain text", async () => {
+      const sourceMarkup = '<h2>Responsibilities</h2><ul><li>Build APIs</li></ul>';
+      items = [{ ...original, descriptionHtml: sourceMarkup }];
+      await syncSource(db, source.id, provider);
+      const job = await db.job.findFirstOrThrow({ where: { sourceId: source.id } });
+      const detail = await (await fetch(`${base}/jobs/${job.slug}`)).json();
+      assert.equal(detail.descriptionHtml, sourceMarkup);
+      assert.equal(detail.description, original.description);
+      const listing = await (await fetch(`${base}/jobs?search=React`)).json();
+      assert.equal(listing.items.find((item: { id: string }) => item.id === job.id)?.descriptionHtml, undefined);
+      items = [original];
+      await syncSource(db, source.id, provider);
+    });
+
     await t.test(
       "hidden jobs and disabled sources stay out of public results",
       async () => {

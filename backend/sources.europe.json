@@ -7,6 +7,7 @@
     "company": {
       "name": "Adyen",
       "slug": "adyen",
+      "website": "https://www.adyen.com",
       "careerUrl": "https://job-boards.greenhouse.io/adyen"
     }
   },
@@ -18,6 +19,7 @@
     "company": {
       "name": "Wolt",
       "slug": "wolt",
+      "website": "https://www.wolt.com",
       "careerUrl": "https://job-boards.greenhouse.io/wolt"
     }
   },
@@ -29,6 +31,8 @@
     "company": {
       "name": "Deliveroo",
       "slug": "deliveroo",
+      "website": "https://deliveroo.co.uk",
+      "logoUrl": "https://cwa.roocdn.com/_next/static/apple-touch-icon.870581c7.png",
       "careerUrl": "https://job-boards.greenhouse.io/deliveroo"
     }
   },
@@ -40,6 +44,8 @@
     "company": {
       "name": "HelloFresh",
       "slug": "hellofresh",
+      "website": "https://www.hellofreshgroup.com",
+      "logoUrl": "https://www.hellofreshgroup.com/icons/icon-144x144.png",
       "careerUrl": "https://job-boards.greenhouse.io/hellofresh"
     }
   },
@@ -51,6 +57,7 @@
     "company": {
       "name": "N26",
       "slug": "n26",
+      "website": "https://n26.com",
       "careerUrl": "https://job-boards.greenhouse.io/n26"
     }
   },
@@ -62,6 +69,8 @@
     "company": {
       "name": "Monzo",
       "slug": "monzo",
+      "website": "https://monzo.com",
+      "logoUrl": "https://static-assets.monzo.com/monzo-com/67c44e8dc898b1d9b7396f44887a8e2955d7b573/_next/static/media/favicon.87a9df8c.png",
       "careerUrl": "https://job-boards.greenhouse.io/monzo"
     }
   },
@@ -73,6 +82,8 @@
     "company": {
       "name": "Canonical",
       "slug": "canonical",
+      "website": "https://canonical.com",
+      "logoUrl": "https://assets.ubuntu.com/v1/f38b9c7e-COF%20apple-touch-icon.png",
       "careerUrl": "https://job-boards.greenhouse.io/canonical"
     }
   },
@@ -84,6 +95,7 @@
     "company": {
       "name": "Grafana Labs",
       "slug": "grafana-labs",
+      "website": "https://grafana.com",
       "careerUrl": "https://job-boards.greenhouse.io/grafanalabs"
     }
   },
@@ -95,6 +107,7 @@
     "company": {
       "name": "GitLab",
       "slug": "gitlab",
+      "website": "https://about.gitlab.com",
       "careerUrl": "https://job-boards.greenhouse.io/gitlab"
     }
   },
@@ -106,6 +119,7 @@
     "company": {
       "name": "Elastic",
       "slug": "elastic",
+      "website": "https://www.elastic.co",
       "careerUrl": "https://job-boards.greenhouse.io/elastic"
     }
   },
@@ -117,6 +131,7 @@
     "company": {
       "name": "Doctolib",
       "slug": "doctolib",
+      "website": "https://www.doctolib.com",
       "careerUrl": "https://job-boards.greenhouse.io/doctolib"
     }
   },
@@ -128,6 +143,8 @@
     "company": {
       "name": "SumUp",
       "slug": "sumup",
+      "website": "https://www.sumup.com",
+      "logoUrl": "https://static.sumup.com/favicons/favicon-96x96.png",
       "careerUrl": "https://job-boards.greenhouse.io/sumup"
     }
   },
@@ -139,6 +156,7 @@
     "company": {
       "name": "Contentful",
       "slug": "contentful",
+      "website": "https://www.contentful.com",
       "careerUrl": "https://job-boards.greenhouse.io/contentful"
     }
   },
@@ -150,6 +168,7 @@
     "company": {
       "name": "Datadog",
       "slug": "datadog",
+      "website": "https://www.datadoghq.com",
       "careerUrl": "https://job-boards.greenhouse.io/datadog"
     }
   },
@@ -161,6 +180,7 @@
     "company": {
       "name": "Cloudflare",
       "slug": "cloudflare",
+      "website": "https://www.cloudflare.com",
       "careerUrl": "https://job-boards.greenhouse.io/cloudflare"
     }
   },
@@ -172,6 +192,7 @@
     "company": {
       "name": "MongoDB",
       "slug": "mongodb",
+      "website": "https://www.mongodb.com",
       "careerUrl": "https://job-boards.greenhouse.io/mongodb"
     }
   },
@@ -183,6 +204,7 @@
     "company": {
       "name": "GetYourGuide",
       "slug": "getyourguide",
+      "website": "https://www.getyourguide.com",
       "careerUrl": "https://job-boards.greenhouse.io/getyourguide"
     }
   },
@@ -194,6 +216,7 @@
     "company": {
       "name": "Celonis",
       "slug": "celonis",
+      "website": "https://www.celonis.com",
       "careerUrl": "https://job-boards.greenhouse.io/celonis"
     }
   },
@@ -205,6 +228,7 @@
     "company": {
       "name": "BlaBlaCar",
       "slug": "blablacar",
+      "website": "https://www.blablacar.com",
       "careerUrl": "https://jobs.lever.co/blablacar"
     }
   },
@@ -216,6 +240,7 @@
     "company": {
       "name": "Qonto",
       "slug": "qonto",
+      "website": "https://qonto.com",
       "careerUrl": "https://jobs.lever.co/qonto"
     }
   },
@@ -227,6 +252,7 @@
     "company": {
       "name": "DeepL",
       "slug": "deepl",
+      "website": "https://www.deepl.com",
       "careerUrl": "https://jobs.ashbyhq.com/deepl"
     }
   },
@@ -238,6 +264,7 @@
     "company": {
       "name": "Linear",
       "slug": "linear",
+      "website": "https://linear.app",
       "careerUrl": "https://jobs.ashbyhq.com/linear"
     }
   },
@@ -249,6 +276,7 @@
     "company": {
       "name": "ElevenLabs",
       "slug": "elevenlabs",
+      "website": "https://elevenlabs.io",
       "careerUrl": "https://jobs.ashbyhq.com/elevenlabs"
     }
   },
@@ -260,6 +288,7 @@
     "company": {
       "name": "n8n",
       "slug": "n8n",
+      "website": "https://n8n.io",
       "careerUrl": "https://jobs.ashbyhq.com/n8n"
     }
   },
@@ -271,6 +300,7 @@
     "company": {
       "name": "Lovable",
       "slug": "lovable",
+      "website": "https://lovable.dev",
       "careerUrl": "https://jobs.ashbyhq.com/lovable"
     }
   },
@@ -282,6 +312,7 @@
     "company": {
       "name": "Personio",
       "slug": "personio",
+      "website": "https://www.personio.com",
       "careerUrl": "https://personio.jobs.personio.com"
     }
   },
@@ -293,6 +324,7 @@
     "company": {
       "name": "Tellent",
       "slug": "tellent",
+      "website": "https://tellent.com",
       "careerUrl": "https://jobs.recruitee.com"
     }
   },
@@ -304,6 +336,8 @@
     "company": {
       "name": "bunq",
       "slug": "bunq",
+      "website": "https://www.bunq.com",
+      "logoUrl": "https://framerusercontent.com/images/ziGDZruFQDclo0tQlc6TKONVk.png",
       "careerUrl": "https://bunq.recruitee.com"
     }
   },
@@ -315,6 +349,7 @@
     "company": {
       "name": "Believe",
       "slug": "believe",
+      "website": "https://www.believe.com",
       "careerUrl": "https://careers.smartrecruiters.com/Believe"
     }
   },
@@ -326,6 +361,8 @@
     "company": {
       "name": "Wise",
       "slug": "wise",
+      "website": "https://wise.com",
+      "logoUrl": "https://wise.com/public-resources/assets/icons/wise-personal/apple_touch_icon.png",
       "careerUrl": "https://careers.smartrecruiters.com/Wise"
     }
   },
@@ -337,6 +374,7 @@
     "company": {
       "name": "Version 1",
       "slug": "version-1",
+      "website": "https://www.version1.com",
       "careerUrl": "https://careers.smartrecruiters.com/Version1"
     }
   },
@@ -348,6 +386,7 @@
     "company": {
       "name": "Devoteam",
       "slug": "devoteam",
+      "website": "https://www.devoteam.com",
       "careerUrl": "https://careers.smartrecruiters.com/Devoteam"
     }
   }

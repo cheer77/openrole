@@ -56,6 +56,7 @@ const companySchema = z
       .max(120),
     website: nullableUrl,
     careerUrl: nullableUrl,
+    logoUrl: nullableUrl.default(null),
     country: z.string().max(80).nullable(),
     enabled: z.boolean(),
   })
@@ -217,7 +218,7 @@ export class AdminController {
   ) {
     const data = parse(jobSchema, input);
     return this.withJob(id, (tx) =>
-      tx.job.update({ where: { id }, data: { ...data, manualOverride: true } }),
+      tx.job.update({ where: { id }, data: { ...data, descriptionHtml: null, manualOverride: true } }),
     );
   }
   @Patch("jobs/:id/status") async status(

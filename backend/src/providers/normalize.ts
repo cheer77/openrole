@@ -19,6 +19,7 @@ export const normalizedJobSchema = z
     externalId: z.string().min(1).max(500),
     title: z.string().min(1).max(500),
     description: z.string().min(1).max(200000),
+    descriptionHtml: z.string().max(200000).nullable().default(null),
     shortDescription: z.string().max(300),
     category: z.string(),
     location: z.string().max(5000),
@@ -51,6 +52,7 @@ export type RawJob = {
   externalId: string;
   title: string;
   description: string;
+  descriptionHtml?: string;
   location?: string;
   sourceUrl: string;
   applyUrl: string;
@@ -76,6 +78,17 @@ export function plainText(value: string) {
       { selector: "img", format: "skip" },
     ],
   }).trim();
+}
+
+export function escapeHtml(value: string) {
+  return value.replace(/[&<>"']/g, (character) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]!,
+  );
+}
+
+export function sourceBodyHtml(value: string) {
+  if (/<\/?(?:p|div|ul|ol|li|h[1-6]|br|blockquote|strong|em|a)\b/i.test(value)) return value;
+  return `<p>${escapeHtml(value).replace(/\n\s*\n/g, "</p><p>").replace(/\n/g, "<br>")}</p>`;
 }
 
 const categoryRules: [RegExp, string][] = [
@@ -114,6 +127,10 @@ const technologies = [
 export function normalize(raw: RawJob): NormalizedJob {
   const title = plainText(raw.title).replace(/\s+/g, " ");
   const description = plainText(raw.description);
+  const markup = raw.descriptionHtml ?? raw.description;
+  const descriptionHtml = /<\/?(?:h[1-6]|p|div|span|ul|ol|li|strong|b|em|i|br|a|blockquote)\b/i.test(markup) && markup.length <= 200000
+    ? markup
+    : null;
   const text = `${title} ${description}`;
   const explicitLocationWorkplace = /\bhybrid\b/i.test(raw.location ?? "")
     ? "hybrid"
@@ -153,6 +170,7 @@ export function normalize(raw: RawJob): NormalizedJob {
     externalId: raw.externalId,
     title,
     description,
+    descriptionHtml,
     shortDescription: description.replace(/\s+/g, " ").slice(0, 300),
     category: categoryRules.find(([rule]) => rule.test(title))?.[1] ?? "Other",
     location: raw.location?.trim() || "Not specified",

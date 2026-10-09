@@ -61,7 +61,7 @@ class ApiController {
           orderBy,
           skip: (query.page - 1) * query.limit,
           take: query.limit,
-          omit: { description: true, missingSince: true },
+          omit: { description: true, descriptionHtml: true, missingSince: true },
           include: { company: true },
         }),
       ],

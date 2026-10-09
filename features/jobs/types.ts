@@ -55,6 +55,7 @@ export interface Job {
   title: string;
   company: {
     name: string;
+    logoUrl: string | null;
     initials: string;
     color: string;
     background: string;
@@ -73,6 +74,7 @@ export interface Job {
   sourceUrl: string;
   shortDescription: string;
   description: string[];
+  descriptionHtml?: string | null;
   eligibility: string;
   applyUrl: string;
 }

@@ -76,6 +76,7 @@ model Job {
   sourceId String
   source Source @relation(fields: [sourceId], references: [id], onDelete: Restrict)
   description String
+  descriptionHtml String?
   shortDescription String
   category String
   location String

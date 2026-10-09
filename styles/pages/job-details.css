@@ -414,9 +414,65 @@
   }
 }
 
-.source-paragraph {
-  white-space: pre-line;
+.job-description {
+  max-width: 800px;
   overflow-wrap: anywhere;
+}
+.job-description-content {
+  color: #37445b;
+  font-size: 15px;
+  line-height: 1.75;
+}
+.detail-copy .job-description h2 {
+  color: var(--text);
+  font-size: clamp(19px, 2vw, 22px);
+  line-height: 1.35;
+  letter-spacing: -0.025em;
+  margin: 32px 0 14px;
+}
+.detail-copy .job-description > h2:first-child,
+.detail-copy .job-description-content > h2:first-child {
+  margin-top: 0;
+}
+.detail-copy .job-description h3 {
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 1.4;
+  margin: 24px 0 10px;
+}
+.detail-copy .job-description p,
+.detail-copy .job-description li,
+.detail-copy .job-description blockquote {
+  color: #37445b;
+  font-size: 15px;
+  line-height: 1.75;
+}
+.detail-copy .job-description p {
+  margin: 0 0 16px;
+}
+.detail-copy .job-description ul,
+.detail-copy .job-description ol {
+  margin: 8px 0 20px;
+  padding-left: 24px;
+}
+.detail-copy .job-description ol { list-style: decimal; }
+.detail-copy .job-description li { padding-left: 5px; margin-bottom: 8px; }
+.detail-copy .job-description li::marker { color: var(--brand); }
+.job-description strong,
+.job-description b { color: var(--text); font-weight: 650; }
+.job-description a { color: #365eaf; text-decoration: underline; text-underline-offset: 3px; }
+.job-description a:hover { color: var(--brand); }
+.job-description a:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; border-radius: 2px; }
+.job-description-content > div + div { margin-top: 14px; }
+.job-description blockquote { margin: 16px 0; padding-left: 16px; border-left: 3px solid var(--border-strong); }
+@media (max-width: 640px) {
+  .job-description-content { font-size: 14px; line-height: 1.72; }
+  .detail-copy .job-description p,
+  .detail-copy .job-description li,
+  .detail-copy .job-description blockquote { font-size: 14px; line-height: 1.72; }
+  .detail-copy .job-description ul,
+  .detail-copy .job-description ol { padding-left: 21px; }
 }
 .detail-page {
   overflow-wrap: anywhere;

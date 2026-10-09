@@ -42,7 +42,15 @@ for (const job of jobs) {
   const company = await db.company.upsert({
     where: { slug },
     update: {},
-    create: { slug, name: job.company.name, careerUrl: job.company.website },
+    create: {
+      slug,
+      name: job.company.name,
+      careerUrl: job.company.website,
+      logoUrl:
+        job.company.name === "Linear"
+          ? "http://127.0.0.1:3100/icon.svg"
+          : null,
+    },
   });
   const source = await db.source.upsert({
     where: {
@@ -81,6 +89,9 @@ for (const job of jobs) {
         ...job.requirements,
         ...job.technologies,
       ].join("\n\n"),
+      descriptionHtml: job.company.name === "Linear"
+        ? '<h1>Working at Linear</h1><p>Build <strong>useful software</strong> with the team.</p><h3>Requirements</h3><ul><li>React</li><li>TypeScript</li></ul><p>Read <a href="https://linear.app/careers">our careers page</a>.</p><script>alert(1)</script>'
+        : null,
       shortDescription: job.shortDescription,
       sourceUrl: job.applyUrl,
       applyUrl: job.applyUrl,

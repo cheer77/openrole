@@ -1,7 +1,7 @@
 import { setTimeout as delay } from "node:timers/promises";
 import { z } from "zod";
 import { fetchJson, type FetchJson } from "./http.js";
-import { normalize, httpUrl, type NormalizedJob } from "./normalize.js";
+import { normalize, escapeHtml, sourceBodyHtml, httpUrl, type NormalizedJob } from "./normalize.js";
 import { parseIdentifier } from "./source-config.js";
 import type { JobProvider } from "./providers.js";
 
@@ -100,6 +100,10 @@ export class SmartRecruitersProvider implements JobProvider {
             .filter(Boolean)
             .map((s) => `${s!.title ?? ""}\n${s!.text}`)
             .join("\n\n"),
+          descriptionHtml: Object.values(job.jobAd.sections)
+            .filter(Boolean)
+            .map((s) => `${s!.title ? `<h2>${escapeHtml(s!.title)}</h2>` : ""}${sourceBodyHtml(s!.text)}`)
+            .join("\n"),
           location:
             location.fullLocation ||
             [location.city, location.region, location.country]

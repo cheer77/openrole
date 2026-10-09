@@ -7,6 +7,7 @@ import { ApplyLink } from "@/components/apply-link";
 import { CompanyLogo } from "@/components/company-logo";
 import { Icon } from "@/components/icon";
 import { formatSalary, locationLabel } from "@/lib/format";
+import { JobDescription } from "@/components/job-description";
 import { parseFilters, serializeFilters } from "@/features/jobs/filter-jobs";
 export const dynamic = "force-dynamic";
 type Props = {
@@ -87,17 +88,10 @@ export default async function JobDetails({ params, searchParams }: Props) {
                 </small>
               </div>
             </div>
-            <section>
-              <h2>About the role</h2>
-              {job.description.length === 0 && (
-                <p>Read the full description on the company website.</p>
-              )}
-              {job.description.map((paragraph) => (
-                <p className="source-paragraph" key={paragraph}>
-                  {paragraph}
-                </p>
-              ))}
-            </section>
+            <JobDescription
+              description={job.description.join("\n\n")}
+              descriptionHtml={job.descriptionHtml}
+            />
             <section className="about-company">
               <h2>About {job.company.name}</h2>
               <a

@@ -810,6 +810,7 @@ export function getMockJobs(now = Date.now()): Job[] {
         title,
         company: {
           name,
+          logoUrl: null,
           initials,
           color,
           background,

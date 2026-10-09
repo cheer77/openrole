@@ -16,6 +16,7 @@ npm run dev
 ```
 Запуск Backend, база данных, Redis и worker -
 docker compose --profile backend up -d
+проверить статус backend - localhost:4000/health
 
 Остановить Backend -
 docker compose --profile backend stop

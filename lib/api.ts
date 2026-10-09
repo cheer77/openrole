@@ -6,6 +6,7 @@ export interface ApiCompany {
   id: string;
   name: string;
   slug: string;
+  logoUrl: string | null;
   website: string | null;
   careerUrl: string | null;
   country: string | null;
@@ -27,6 +28,7 @@ interface ApiJob {
   publishedAt: string | null;
   firstSeenAt: string;
   description?: string;
+  descriptionHtml?: string | null;
   shortDescription: string;
   applyUrl: string;
   sourceUrl: string;
@@ -58,8 +60,17 @@ async function request<T>(path: string): Promise<T> {
   return response.json() as Promise<T>;
 }
 export function companyPresentation(company: ApiCompany): Job["company"] {
+  let logoUrl = company.logoUrl;
+  if (!logoUrl && company.website) {
+    try {
+      logoUrl = new URL("/favicon.ico", company.website).toString();
+    } catch {
+      logoUrl = null;
+    }
+  }
   return {
     name: company.name,
+    logoUrl,
     initials: company.name
       .split(/\s+/)
       .slice(0, 2)
@@ -103,6 +114,7 @@ function toJob(job: ApiJob): Job {
     firstSeenAt: job.firstSeenAt,
     shortDescription: job.shortDescription,
     description: job.description?.split(/\n\s*\n/).filter(Boolean) || [],
+    descriptionHtml: job.descriptionHtml ?? null,
     eligibility: job.location || "Location not specified",
     applyUrl: job.applyUrl,
     sourceUrl: job.sourceUrl,

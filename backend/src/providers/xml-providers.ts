@@ -2,7 +2,7 @@ import { XMLParser, XMLValidator } from "fast-xml-parser";
 import { decodeXML } from "entities";
 import { z } from "zod";
 import { fetchText, type FetchText } from "./http.js";
-import { normalize, httpUrl } from "./normalize.js";
+import { normalize, escapeHtml, sourceBodyHtml, httpUrl } from "./normalize.js";
 import { parseIdentifier } from "./source-config.js";
 import type { JobProvider } from "./providers.js";
 
@@ -79,6 +79,9 @@ export class PersonioProvider implements JobProvider {
         description: job.jobDescriptions.jobDescription
           .map((s) => `${s.name}\n${s.value}`)
           .join("\n\n"),
+        descriptionHtml: job.jobDescriptions.jobDescription
+          .map((s) => `<h2>${escapeHtml(s.name)}</h2>${sourceBodyHtml(s.value)}`)
+          .join("\n"),
         location: [
           job.office,
           ...(typeof job.additionalOffices === "object"

@@ -5,7 +5,7 @@ import {
   LeverProvider,
   AshbyProvider,
 } from "../src/providers/providers.js";
-import { normalize, plainText } from "../src/providers/normalize.js";
+import { normalize, plainText, sourceBodyHtml } from "../src/providers/normalize.js";
 import { jobsQuery } from "../src/jobs-query.js";
 import { jobSlug } from "../src/sync.js";
 
@@ -25,10 +25,17 @@ test("normalization cleans HTML, classifies role, preserves unknown geography an
   assert.equal(job.publishedAt, null);
   assert.equal(job.remoteType, "UNKNOWN");
   assert.equal(job.country, null);
+  assert.equal(job.description, "Use React, TypeScript & Docker.");
+  assert.equal(job.descriptionHtml, raw.description);
   assert.equal(
     plainText("&lt;p&gt;Hello &amp;amp; welcome&lt;/p&gt;"),
     "Hello & welcome",
   );
+});
+
+test("plain provider sections become safe paragraphs while real markup is preserved", () => {
+  assert.equal(sourceBodyHtml("Build A & B\n\nWork together"), "<p>Build A &amp; B</p><p>Work together</p>");
+  assert.equal(sourceBodyHtml("<ul><li>One</li></ul>"), "<ul><li>One</li></ul>");
 });
 
 test("only structured annual compensation is comparable", () => {

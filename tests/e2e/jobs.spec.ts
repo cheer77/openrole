@@ -32,6 +32,34 @@ test("search, URL sharing, empty state and reset", async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
+test("company logos use the stored image and fall back cleanly when it fails", async ({
+  page,
+}) => {
+  await page.goto("/jobs?q=Linear");
+  const available = page
+    .locator('.company-logo[aria-label="Linear logo"]')
+    .first();
+  await expect(available.locator("img")).toBeVisible();
+
+  await page.goto("/jobs?q=Monzo");
+  const missing = page
+    .locator('.company-logo[aria-label="Monzo logo unavailable"]')
+    .first();
+  await expect(missing.locator("svg")).toBeVisible();
+});
+
+test("job description has safe sections, lists and links within the mobile viewport", async ({ page }) => {
+  await page.goto("/jobs?q=Linear");
+  await page.locator(".view-job").first().click();
+  const description = page.locator(".job-description");
+  await expect(description.getByRole("heading", { name: "Working at Linear", level: 2 })).toBeVisible();
+  await expect(description.getByRole("heading", { name: "Requirements", level: 3 })).toBeVisible();
+  await expect(description.locator("ul li")).toHaveCount(2);
+  await expect(description.getByRole("link", { name: "our careers page" })).toHaveAttribute("rel", "noopener noreferrer");
+  await expect(description.locator("script")).toHaveCount(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width);
+});
+
 test("quick filters combine and history restores them", async ({ page }) => {
   await page.goto("/jobs");
   await selectOption(

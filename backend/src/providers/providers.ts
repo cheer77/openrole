@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { normalize, httpUrl, type NormalizedJob } from "./normalize.js";
+import { normalize, escapeHtml, sourceBodyHtml, httpUrl, type NormalizedJob } from "./normalize.js";
 import { fetchJson, type FetchJson } from "./http.js";
 import { parseIdentifier } from "./source-config.js";
 import { SmartRecruitersProvider } from "./smartrecruiters.js";
@@ -112,6 +112,11 @@ export class LeverProvider implements JobProvider {
             ]
               .filter(Boolean)
               .join("\n\n"),
+            descriptionHtml: [
+              job.description ? sourceBodyHtml(job.description) : job.descriptionPlain ? sourceBodyHtml(job.descriptionPlain) : null,
+              ...(job.lists ?? []).map((list) => `<h2>${escapeHtml(list.text)}</h2>${sourceBodyHtml(list.content)}`),
+              job.additionalPlain ? sourceBodyHtml(job.additionalPlain) : null,
+            ].filter(Boolean).join("\n\n"),
             location: job.categories.location,
             workplace: job.workplaceType,
             employmentType: job.categories.commitment,
@@ -198,6 +203,7 @@ export class AshbyProvider implements JobProvider {
             new URL(job.jobUrl).pathname.replace(/\/$/, "").split("/").pop()!,
           title: job.title,
           description: job.descriptionPlain ?? job.descriptionHtml ?? "",
+          descriptionHtml: job.descriptionHtml,
           location: job.location,
           workplace: job.workplaceType ?? (job.isRemote ? "Remote" : undefined),
           city: address?.addressLocality,

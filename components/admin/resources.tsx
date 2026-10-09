@@ -509,6 +509,7 @@ function companyBody(item: AdminItem, enabled: boolean) {
     slug: item.slug,
     website: item.website || null,
     careerUrl: item.careerUrl || null,
+    logoUrl: item.logoUrl || null,
     country: item.country || null,
     enabled,
   };
@@ -609,6 +610,7 @@ function Editor({
               slug: text("slug"),
               website: nullable("website"),
               careerUrl: nullable("careerUrl"),
+              logoUrl: nullable("logoUrl"),
               country: nullable("country"),
               enabled: form.has("enabled"),
             };
@@ -736,6 +738,7 @@ function Editor({
                 {field("slug", "URL slug", { required: true, maxLength: 120 })}
                 {field("website", "Website", { type: "url" })}
                 {field("careerUrl", "Careers URL", { type: "url" })}
+                {field("logoUrl", "Logo URL", { type: "url" })}
                 {field("country", "Country", { maxLength: 80 })}
               </>
             ) : (

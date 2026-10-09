@@ -90,6 +90,7 @@ export interface AdminItem {
   applyUrl?: string;
   enabled?: boolean;
   website?: string | null;
+  logoUrl?: string | null;
   careerUrl?: string | null;
   country?: string | null;
   type?: string;
