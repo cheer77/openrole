@@ -16,9 +16,15 @@ interface ApiJob {
   id: string;
   slug: string;
   title: string;
+  status: "ACTIVE" | "CLOSED";
   company: ApiCompany;
   category: string;
   location: string;
+  city?: string | null;
+  country?: string | null;
+  region?: string | null;
+  employmentType?: string | null;
+  closedAt?: string | null;
   remoteType: "REMOTE" | "HYBRID" | "ON_SITE" | "UNKNOWN";
   experienceLevel: string | null;
   salaryMin: number | null;
@@ -70,6 +76,7 @@ export function companyPresentation(company: ApiCompany): Job["company"] {
   }
   return {
     name: company.name,
+    slug: company.slug,
     logoUrl,
     initials: company.name
       .split(/\s+/)
@@ -87,10 +94,17 @@ function toJob(job: ApiJob): Job {
   return {
     id: job.id,
     slug: job.slug,
+    status: job.status,
     title: job.title,
     company: companyPresentation(job.company),
     category: job.category,
     location: job.location || "Location not specified",
+    city: job.city || undefined,
+    country: job.country ?? null,
+    region: job.region ?? null,
+    remoteType: job.remoteType,
+    employmentType: job.employmentType ?? null,
+    closedAt: job.closedAt ?? null,
     workType: (
       {
         REMOTE: "Remote",
@@ -130,10 +144,44 @@ export const getJob = cache(async (slug: string): Promise<Job | null> => {
   try {
     return toJob(await request<ApiJob>(`/jobs/${encodeURIComponent(slug)}`));
   } catch (error) {
+    if (error instanceof ApiError && [404, 410].includes(error.status)) return null;
+    throw error;
+  }
+});
+export const getSimilarJobs = cache(async (slug: string): Promise<Job[]> => {
+  try {
+    return (await request<ApiJob[]>(`/jobs/${encodeURIComponent(slug)}/similar`)).map(toJob);
+  } catch {
+    return [];
+  }
+});
+export interface CompanyDetails extends ApiCompany {
+  activeJobs: number;
+  categories: { name: string; count: number }[];
+}
+export const getCompany = cache(async (slug: string): Promise<CompanyDetails | null> => {
+  try {
+    return await request<CompanyDetails>(`/companies/${encodeURIComponent(slug)}`);
+  } catch (error) {
     if (error instanceof ApiError && error.status === 404) return null;
     throw error;
   }
 });
+export interface SeoSummary {
+  jobs: number;
+  companies: number;
+  remote: number;
+  categories: { name: string; count: number }[];
+  countries: { name: string; count: number }[];
+  technologies: { name: string; count: number }[];
+}
+export function getSeoSummary() { return request<SeoSummary>("/seo/summary"); }
+export function getSeoJobs(offset: number, limit: number) {
+  return request<{ slug: string; updatedAt: string }[]>(`/seo/jobs?offset=${offset}&limit=${limit}`);
+}
+export function getSeoCompanies(offset: number, limit: number) {
+  return request<{ slug: string; updatedAt: string }[]>(`/seo/companies?offset=${offset}&limit=${limit}`);
+}
 export function getCompanies(
   query = new URLSearchParams(),
 ): Promise<PageResult<ApiCompany>> {

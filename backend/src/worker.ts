@@ -4,6 +4,7 @@ import { createDb } from "./db.js";
 import { createQueue, enqueueSources, queueName } from "./queue.js";
 import { redisConnection } from "./config.js";
 import { syncSource } from "./sync.js";
+import { cleanupClosedJobs } from "./cleanup.js";
 
 async function main() {
   const db = createDb();
@@ -15,6 +16,11 @@ async function main() {
     { every: 3600000 },
     { name: "all", data: {} },
   );
+  await queue.upsertJobScheduler(
+    "daily-cleanup",
+    { every: 86400000 },
+    { name: "cleanup", data: {} },
+  );
   const worker = new Worker<{ sourceId?: string }>(
     queueName,
     async (job) => {
@@ -22,6 +28,7 @@ async function main() {
         await retainData(db);
         return { queued: await enqueueSources(queue, db) };
       }
+      if (job.name === "cleanup") return cleanupClosedJobs(db);
       if (job.name !== "source" || !job.data.sourceId)
         throw new Error("Invalid sync job");
       return syncSource(db, job.data.sourceId);
@@ -63,7 +70,7 @@ async function main() {
   process.once("SIGTERM", () => {
     void stop();
   });
-  console.log("Sync worker ready; hourly schedule enabled");
+  console.log("Sync worker ready; hourly imports and daily cleanup enabled");
 }
 void main().catch((error: unknown) => {
   console.error(error);

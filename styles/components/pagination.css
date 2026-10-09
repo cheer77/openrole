@@ -15,7 +15,8 @@
   align-items: center;
   gap: 5px;
 }
-.pagination button {
+.pagination button,
+.pagination nav .pagination-link {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -27,13 +28,15 @@
   font-size: 12px;
   color: var(--text-secondary);
 }
-.pagination button.current {
+.pagination button.current,
+.pagination nav .pagination-link.current {
   color: #fff;
   background: var(--brand);
   border-color: var(--brand);
   font-weight: 600;
 }
-.pagination button:hover:not(:disabled):not(.current) {
+.pagination button:hover:not(:disabled):not(.current),
+.pagination nav .pagination-link:hover:not(.current) {
   border-color: var(--brand);
   color: var(--brand);
   background: var(--brand-soft);
@@ -44,7 +47,8 @@
     gap: 17px;
     margin-top: 22px;
   }
-  .pagination button {
+  .pagination button,
+  .pagination nav .pagination-link {
     width: 44px;
     height: 44px;
   }

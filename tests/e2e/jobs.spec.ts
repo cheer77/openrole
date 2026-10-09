@@ -85,10 +85,10 @@ test("pagination, detail content, return state, external Apply", async ({
   context,
 }) => {
   await page.goto("/jobs");
-  await page.getByRole("button", { name: "Page 2", exact: true }).click();
+  await page.getByRole("link", { name: "Page 2", exact: true }).click();
   await expect(page).toHaveURL(/page=2/);
   await expect(
-    page.getByRole("button", { name: "Page 2", exact: true }),
+    page.getByRole("link", { name: "Page 2", exact: true }),
   ).toHaveAttribute("aria-current", "page");
   await page.locator(".view-job").first().click();
   await expect(
@@ -214,7 +214,7 @@ test("responsive layout fits viewport and captures the product", async ({
   }
   await page.locator(".view-job").first().click();
   await expect(
-    page.getByRole("heading", { name: "About the role" }),
+    page.getByRole("heading", { name: "Working at Linear" }),
   ).toBeVisible();
   await page.screenshot({
     path: `test-results/openrole-detail-${testInfo.project.name}.png`,
@@ -263,8 +263,7 @@ test("mobile drawer closes with Escape and discards unapplied changes", async ({
 
 test("unknown job has a useful 404", async ({ page }) => {
   const response = await page.goto("/jobs/not-a-real-job");
-  // Next.js streams loading.tsx before the async lookup finishes: streamed notFound uses 200 + noindex.
-  expect([200, 404]).toContain(response?.status());
+  expect(response?.status()).toBe(404);
   await expect(page.locator('meta[name="robots"]').first()).toHaveAttribute(
     "content",
     /noindex/,
@@ -294,7 +293,7 @@ test("companies navigation opens a working company search", async ({
   await page
     .getByRole("link", { name: "View jobs at Linear", exact: true })
     .click();
-  await expect(page).toHaveURL(/q=Linear/);
+  await expect(page).toHaveURL(/\/companies\/linear/);
   await expect(page.locator(".job-card")).toHaveCount(3);
   await expect(page.locator(".company-name").first()).toHaveText("Linear");
 });

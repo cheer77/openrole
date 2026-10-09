@@ -232,7 +232,12 @@ export class AdminController {
     return this.withJob(id, (tx) =>
       tx.job.update({
         where: { id },
-        data: { ...data, statusOverride: data.status !== "ACTIVE" },
+        data: {
+          ...data,
+          statusOverride: data.status !== "ACTIVE",
+          closedAt: data.status === "CLOSED" ? new Date() : null,
+          ...(data.status === "ACTIVE" ? { missingCount: 0, missingSince: null } : {}),
+        },
       }),
     );
   }

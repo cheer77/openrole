@@ -34,6 +34,7 @@ await db.adminSession.create({
   },
 });
 await db.job.deleteMany();
+await db.expiredJob.deleteMany();
 await db.source.deleteMany();
 await db.company.deleteMany();
 const jobs = getMockJobs();
@@ -102,6 +103,20 @@ for (const job of jobs) {
     },
   });
 }
+const sample = await db.job.findFirstOrThrow({ where: { id: jobs[0].id } });
+await db.job.create({ data: {
+  externalId: "closed-phase5", slug: "closed-job-phase5", title: "Closed Frontend Engineer",
+  companyId: sample.companyId, sourceId: sample.sourceId, category: sample.category,
+  location: sample.location, remoteType: sample.remoteType,
+  description: "This role has closed.", shortDescription: "Closed role",
+  sourceUrl: sample.sourceUrl, applyUrl: sample.applyUrl,
+  firstSeenAt: sample.firstSeenAt, lastCheckedAt: new Date(), sortDate: sample.sortDate,
+  status: "CLOSED", closedAt: new Date(),
+} });
+await db.expiredJob.create({ data: {
+  id: "expired-phase5", sourceId: sample.sourceId, externalId: "expired-phase5",
+  slug: "expired-job-phase5", title: "Expired Engineer", companyName: jobs[0].company.name,
+} });
 await db.$disconnect();
 const app = await createApp();
 // Failure/latency injection is confined to this test server, never production code.

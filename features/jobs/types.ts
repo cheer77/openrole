@@ -52,8 +52,10 @@ export type Currency = (typeof currencies)[number];
 export interface Job {
   id: string;
   slug: string;
+  status: "ACTIVE" | "CLOSED";
   title: string;
   company: {
+    slug: string;
     name: string;
     logoUrl: string | null;
     initials: string;
@@ -65,12 +67,17 @@ export interface Job {
   category: string;
   location: string;
   city?: string;
+  country?: string | null;
+  region?: string | null;
+  remoteType: "REMOTE" | "HYBRID" | "ON_SITE" | "UNKNOWN";
+  employmentType?: string | null;
   workType: WorkType | "Not specified";
   experience: string;
   salary?: { min: number | null; max: number | null; currency: string };
   technologies: string[];
   publishedAt: string | null;
   firstSeenAt: string;
+  closedAt?: string | null;
   sourceUrl: string;
   shortDescription: string;
   description: string[];

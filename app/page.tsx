@@ -11,6 +11,7 @@ import { formatSalary, locationLabel, timeAgo } from '@/lib/format';
 
 export const metadata: Metadata = {
 	title: 'Discover your next role',
+	alternates: { canonical: '/' },
 	description:
 		'Explore tech and digital roles, companies, and flexible ways to work on Openrole.',
 };

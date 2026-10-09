@@ -94,9 +94,12 @@ model Job {
   applyUrl String
   publishedAt DateTime?
   firstSeenAt DateTime @default(now())
+  lastSeenAt DateTime?
   lastCheckedAt DateTime
   sortDate DateTime
   missingSince DateTime?
+  missingCount Int @default(0)
+  closedAt DateTime?
   status JobStatus @default(ACTIVE)
   manualOverride Boolean @default(false)
   statusOverride Boolean @default(false)
@@ -104,6 +107,11 @@ model Job {
   updatedAt DateTime @updatedAt
   @@unique([sourceId, externalId])
   @@index([status, sortDate, id])
+  @@index([status, closedAt])
+  @@index([status, category])
+  @@index([status, country])
+  @@index([status, remoteType])
+  @@index([status, companyId])
   @@index([publishedAt])
   @@index([category])
   @@index([country])
@@ -112,6 +120,19 @@ model Job {
   @@index([companyId])
   @@index([currency, salaryMin])
   @@index([technologies], type: Gin)
+}
+
+model ExpiredJob {
+  id String @id
+  sourceId String
+  externalId String
+  slug String
+  title String
+  companyName String
+  deletedAt DateTime @default(now())
+  @@index([deletedAt])
+  @@index([slug, deletedAt])
+  @@index([sourceId, externalId, deletedAt])
 }
 
 model AdminSession {

@@ -3,9 +3,9 @@ import type { PrismaClient } from "./generated/prisma/client.js";
 import { getProvider, type JobProvider } from "./providers/providers.js";
 import { normalizedJobSchema } from "./providers/normalize.js";
 
-export function jobSlug(title: string, sourceId: string, externalId: string) {
+export function jobSlug(title: string, sourceId: string, externalId: string, companySlug = "", location = "") {
   const base =
-    title
+    [title, companySlug, location].filter(Boolean).join(" ")
       .toLowerCase()
       .normalize("NFKD")
       .replace(/[\u0300-\u036f]/g, "")
@@ -62,9 +62,17 @@ export async function syncSource(
             manualOverride: true,
             publishedAt: true,
             firstSeenAt: true,
+            closedAt: true,
           },
         });
         const byId = new Map(existing.map((job) => [job.externalId, job]));
+        const expired = await tx.expiredJob.findMany({
+          where: { sourceId, externalId: { in: ids } },
+          select: { externalId: true, slug: true },
+          orderBy: { deletedAt: "desc" },
+        });
+        const priorSlug = new Map<string, string>();
+        for (const item of expired) if (!priorSlug.has(item.externalId)) priorSlug.set(item.externalId, item.slug);
         const deleted = new Set(
           (await tx.deletedJob.findMany({ where: { sourceId } })).map(
             (item) => item.externalId,
@@ -81,7 +89,10 @@ export async function syncSource(
             publishedAt,
             sortDate: publishedAt ?? old?.firstSeenAt ?? now,
             lastCheckedAt: now,
+            lastSeenAt: now,
             missingSince: null,
+            missingCount: 0,
+            closedAt: old?.statusOverride && old.status === "CLOSED" ? old.closedAt : null,
             companyId: source.companyId,
           };
           await tx.job.upsert({
@@ -91,12 +102,12 @@ export async function syncSource(
             create: {
               ...values,
               sourceId,
-              slug: jobSlug(job.title, sourceId, job.externalId),
+              slug: priorSlug.get(job.externalId) ?? jobSlug(job.title, sourceId, job.externalId, source.company.slug, job.city ?? job.country ?? ""),
               firstSeenAt: now,
             },
             update: {
               ...(old?.manualOverride
-                ? { lastCheckedAt: now, missingSince: null }
+                ? { lastCheckedAt: now, lastSeenAt: now, missingSince: null, missingCount: 0, closedAt: values.closedAt }
                 : values),
               status: old?.statusOverride ? old.status : "ACTIVE",
             },
@@ -104,24 +115,29 @@ export async function syncSource(
           if (old) updated++;
           else created++;
         }
-        // Only a complete validated snapshot can start/advance absence tracking.
-        // A second confirmation at least 24h later is required, including an empty board.
+        // Only a complete validated snapshot advances absence tracking.
+        // Three consecutive successful misses, spanning at least 24 hours, close a job.
         const absent = {
           sourceId,
           status: "ACTIVE" as const,
           statusOverride: false,
           externalId: { notIn: ids },
         };
-        const closed = await tx.job.updateMany({
-          where: {
-            ...absent,
-            missingSince: { lte: new Date(now.getTime() - 86400000) },
-          },
-          data: { status: "CLOSED" },
-        });
         await tx.job.updateMany({
           where: { ...absent, missingSince: null },
           data: { missingSince: now },
+        });
+        await tx.job.updateMany({
+          where: absent,
+          data: { missingCount: { increment: 1 }, lastCheckedAt: now },
+        });
+        const closed = await tx.job.updateMany({
+          where: {
+            ...absent,
+            missingCount: { gte: 3 },
+            missingSince: { lte: new Date(now.getTime() - 86400000) },
+          },
+          data: { status: "CLOSED", closedAt: now },
         });
         await tx.source.update({
           where: { id: sourceId },

@@ -1,6 +1,7 @@
 import { Analytics } from "@/components/analytics";
 import type { Metadata, Viewport } from "next";
 import { SiteFooter, SiteHeader } from "@/components/site-header";
+import { robots as indexRobots, siteOrigin } from "@/lib/seo-site";
 import "@/styles/tailwind.css";
 import "@/styles/variables/tokens.css";
 import "@/styles/base/reset.css";
@@ -25,6 +26,7 @@ import "@/styles/pages/companies.css";
 import "@/styles/pages/home.css";
 import "@/styles/pages/auth.css";
 import "@/styles/pages/admin.css";
+import "@/styles/pages/seo.css";
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
@@ -32,13 +34,14 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL(siteOrigin()),
   title: {
     default: "Openrole — Find your next chapter in tech",
     template: "%s | Openrole",
   },
   description:
     "Discover tech and digital jobs with clear location requirements. Search remote, hybrid, and on-site opportunities around the world.",
-  robots: { index: false, follow: false },
+  robots: indexRobots(true),
 };
 export default function RootLayout({
   children,

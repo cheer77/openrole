@@ -3,7 +3,16 @@ import Link from "next/link";
 import { getCompanies, companyPresentation } from "@/lib/api";
 import { CompanyLogo } from "@/components/company-logo";
 import { Icon } from "@/components/icon";
-export const metadata: Metadata = { title: "Explore companies" };
+import { robots } from "@/lib/seo-site";
+export async function generateMetadata({ searchParams }: { searchParams: Promise<{ page?: string }> }): Promise<Metadata> {
+  const { page } = await searchParams;
+  const number = Math.max(1, Number.parseInt(page || "1", 10) || 1);
+  return {
+    title: "Explore companies",
+    alternates: { canonical: number > 1 ? `/companies?page=${number}` : "/companies" },
+    robots: robots(number === 1),
+  };
+}
 export default async function CompaniesPage({
   searchParams,
 }: {
@@ -43,7 +52,7 @@ export default async function CompaniesPage({
             <div className="company-card-footer">
               <span>{company._count?.jobs ?? 0} open jobs</span>
               <Link
-                href={`/jobs?q=${encodeURIComponent(company.name)}`}
+                href={`/companies/${company.slug}`}
                 aria-label={`View jobs at ${company.name}`}
               >
                 View jobs <Icon name="arrow" size={17} />

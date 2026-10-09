@@ -803,6 +803,7 @@ export function getMockJobs(now = Date.now()): Job[] {
               : `You must be based in ${location === "USA" ? "the United States" : location === "UK" ? "the United Kingdom" : location === "Other" ? city : location}. ${workType === "Hybrid" ? "Regular office attendance is required." : workType === "On-site" ? "This role is based in the office." : "This remote role has a geographic restriction."}`;
       return {
         id: `job-${index + 1}`,
+        status: "ACTIVE",
         slug: `${name}-${title}`
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, "-")
@@ -810,6 +811,7 @@ export function getMockJobs(now = Date.now()): Job[] {
         title,
         company: {
           name,
+          slug: name.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
           logoUrl: null,
           initials,
           color,
@@ -821,6 +823,7 @@ export function getMockJobs(now = Date.now()): Job[] {
         location,
         city: city || undefined,
         workType,
+        remoteType: workType === "Remote" ? "REMOTE" : workType === "Hybrid" ? "HYBRID" : "ON_SITE",
         experience,
         salary: min ? { min, max, currency } : undefined,
         technologies: tech,

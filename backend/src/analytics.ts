@@ -10,7 +10,7 @@ export const eventSchema = z
     path: z
       .string()
       .max(250)
-      .regex(/^\/(?:jobs(?:\/[a-zA-Z0-9_-]+)?|companies|privacy)?$/),
+      .regex(/^\/(?:jobs(?:\/[a-zA-Z0-9_-]+)?|companies(?:\/[a-zA-Z0-9_-]+)?|(?:categories|technologies|locations)\/[a-zA-Z0-9_-]+|remote-jobs|privacy)?$/),
     jobId: z.string().max(100).optional(),
     referrer: z.string().max(253).optional(),
     utmSource: z.string().max(100).optional(),
@@ -183,7 +183,7 @@ export async function analyticsReport(
         applyClicks: number;
       }[]
     >(
-      Prisma.sql`SELECT e."jobId" AS id, COALESCE(j.title, 'Deleted job') AS title, COALESCE(c.name, '—') AS company, COUNT(*) FILTER(WHERE e.type='JOB_VIEW')::int AS "jobViews", COUNT(*) FILTER(WHERE e.type='APPLY_CLICK')::int AS "applyClicks" FROM "AnalyticsEvent" e LEFT JOIN "Job" j ON j.id=e."jobId" LEFT JOIN "Company" c ON c.id=j."companyId" WHERE e."occurredAt" >= ${start} AND e."occurredAt" < ${end} AND e."jobId" IS NOT NULL GROUP BY e."jobId",j.title,c.name`,
+      Prisma.sql`SELECT e."jobId" AS id, COALESCE(j.title, x.title, 'Deleted job') AS title, COALESCE(c.name, x."companyName", '—') AS company, COUNT(*) FILTER(WHERE e.type='JOB_VIEW')::int AS "jobViews", COUNT(*) FILTER(WHERE e.type='APPLY_CLICK')::int AS "applyClicks" FROM "AnalyticsEvent" e LEFT JOIN "Job" j ON j.id=e."jobId" LEFT JOIN "ExpiredJob" x ON x.id=e."jobId" LEFT JOIN "Company" c ON c.id=j."companyId" WHERE e."occurredAt" >= ${start} AND e."occurredAt" < ${end} AND e."jobId" IS NOT NULL GROUP BY e."jobId",j.title,x.title,c.name,x."companyName"`,
     ),
     Promise.all([
       db.job.count(),

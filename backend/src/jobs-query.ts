@@ -6,6 +6,7 @@ export const jobsQuerySchema = z
   .object({
     search: z.string().trim().max(150).optional(),
     category: z.string().trim().max(80).optional(),
+    company: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(160).optional(),
     location: z
       .enum([
         "Worldwide",
@@ -100,6 +101,7 @@ export function jobsQuery(input: unknown, now = new Date()) {
     ...(query.category
       ? { category: { equals: query.category, mode: "insensitive" } }
       : {}),
+    ...(query.company ? { company: { slug: query.company, enabled: true } } : {}),
     ...(query.country
       ? { country: { equals: query.country, mode: "insensitive" } }
       : {}),

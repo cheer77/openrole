@@ -7,6 +7,7 @@ import {
 	useOptimistic,
 } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { SearchBar } from '@/components/search-bar';
 import { Select } from '@/components/select';
 import { Icon } from '@/components/icon';
@@ -151,6 +152,10 @@ export function JobsExplorer({
 		document
 			.getElementById('results')
 			?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+	}
+	function pageHref(next: number) {
+		const params = serializeFilters({ ...filters, page: next }).toString();
+		return `/jobs${params ? `?${params}` : ''}`;
 	}
 	const activeChips: { label: string; patch: Partial<Filters> }[] = [
 		...(filters.q ? [{ label: `“${filters.q}”`, patch: { q: '' } }] : []),
@@ -415,38 +420,28 @@ export function JobsExplorer({
 							</p>
 							{pages > 1 && (
 								<nav aria-label="Pagination">
-									<button
-										type="button"
-										aria-label="Previous page"
-										disabled={page === 1}
-										onClick={() => goToPage(page - 1)}
-									>
+									{page === 1 ? <button type="button" aria-label="Previous page" disabled><Icon name="chevron" style={{ transform: 'rotate(180deg)' }} size={15} /></button> : <Link className="pagination-link" href={pageHref(page - 1)} aria-label="Previous page" onClick={(event) => { event.preventDefault(); goToPage(page - 1); }}>
 										<Icon
 											name="chevron"
 											style={{ transform: 'rotate(180deg)' }}
 											size={15}
 										/>
-									</button>
+									</Link>}
 									{pageNumbers(page, pages).map((number) => (
-										<button
-											type="button"
+										<Link
+											className={`pagination-link ${number === page ? 'current' : ''}`}
+											href={pageHref(number)}
 											key={number}
 											aria-label={`Page ${number}`}
 											aria-current={number === page ? 'page' : undefined}
-											className={number === page ? 'current' : ''}
-											onClick={() => goToPage(number)}
+											onClick={(event) => { event.preventDefault(); goToPage(number); }}
 										>
 											{number}
-										</button>
+										</Link>
 									))}
-									<button
-										type="button"
-										aria-label="Next page"
-										disabled={page === pages}
-										onClick={() => goToPage(page + 1)}
-									>
+									{page === pages ? <button type="button" aria-label="Next page" disabled><Icon name="chevron" size={15} /></button> : <Link className="pagination-link" href={pageHref(page + 1)} aria-label="Next page" onClick={(event) => { event.preventDefault(); goToPage(page + 1); }}>
 										<Icon name="chevron" size={15} />
-									</button>
+									</Link>}
 								</nav>
 							)}
 						</div>
