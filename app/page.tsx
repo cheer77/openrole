@@ -157,7 +157,7 @@ export default async function Home() {
 						{companies.slice(0, 8).map((company) => (
 							<Link
 								className="home-company-card"
-								href={`/jobs?q=${encodeURIComponent(company.name)}`}
+								href={`/companies/${company.slug}`}
 								key={company.name}
 								aria-label={`View jobs at ${company.name}`}
 							>

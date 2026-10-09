@@ -28,6 +28,8 @@ docker compose --profile backend stop
 
 Production: `npm run build`, затем `npm start`. Backend запускается отдельно. Без включённых источников коллекции пусты.
 
+После изменений backend при локальном Docker-запуске пересоберите **оба** сервиса: `docker compose --profile backend up -d --build api worker`. Иначе frontend может ссылаться на новые маршруты, которых нет в старом API-контейнере.
+
 ## Возможности
 
 - `/`: общий SearchBar, реальные счётчики, свежие вакансии, компании, ссылки по категориям и регионам.

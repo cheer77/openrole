@@ -14,6 +14,9 @@ test("active jobs expose factual structured data and canonical URL", async ({ pa
   expect(jsonLd.jobLocationType).toBeUndefined();
   const robots = await request.get("/robots.txt");
   expect(await robots.text()).toContain("Sitemap: https://jobs.example.test/sitemap.xml");
+  await page.getByRole("link", { name: "More jobs at Linear" }).click();
+  await expect(page).toHaveURL(/\/companies\/linear$/);
+  await expect(page.locator(".company-profile h1")).toHaveText("Linear");
 });
 
 test("closed and expired jobs leave index and apply flow", async ({ page, request }) => {
