@@ -10,6 +10,9 @@ export function apiJobsQuery(filters: Filters): URLSearchParams {
   const fields = {
     search: filters.q,
     category: filters.category,
+    companyName: filters.companyName,
+    place: filters.place,
+    employmentKind: filters.employmentKind,
     location: filters.location,
     remoteType: (
       { Remote: "REMOTE", Hybrid: "HYBRID", "On-site": "ON_SITE" } as Record<

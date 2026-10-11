@@ -26,6 +26,7 @@ interface ApiJob {
   country?: string | null;
   region?: string | null;
   employmentType?: string | null;
+  employmentKind?: string | null;
   closedAt?: string | null;
   remoteType: "REMOTE" | "HYBRID" | "ON_SITE" | "UNKNOWN";
   experienceLevel: string | null;
@@ -107,6 +108,7 @@ function toJob(job: ApiJob): Job {
     region: job.region ?? null,
     remoteType: job.remoteType,
     employmentType: job.employmentType ?? null,
+    employmentKind: job.employmentKind ?? null,
     closedAt: job.closedAt ?? null,
     workType: (
       {

@@ -1,6 +1,7 @@
 import { convert } from "html-to-text";
 import { decodeHTML } from "entities";
 import { z } from "zod";
+import { classifyEmploymentType, classifyExperienceLevel, classifyJob } from "../jobs/classification.js";
 
 export const httpUrl = z
   .string()
@@ -28,6 +29,7 @@ export const normalizedJobSchema = z
     region: z.string().nullable(),
     remoteType: z.enum(["REMOTE", "HYBRID", "ON_SITE", "UNKNOWN"]),
     employmentType: z.string().nullable(),
+    employmentKind: z.string().nullable(),
     experienceLevel: z.string().nullable(),
     salaryMin: z.number().finite().nonnegative().nullable(),
     salaryMax: z.number().finite().nonnegative().nullable(),
@@ -132,21 +134,6 @@ export function sourceBodyHtml(value: string) {
   return `<p>${escapeHtml(value).replace(/\n\s*\n/g, "</p><p>").replace(/\n/g, "<br>")}</p>`;
 }
 
-const categoryRules: [RegExp, string][] = [
-  [/full.?stack/i, "Full Stack"],
-  [/front.?end/i, "Frontend"],
-  [/back.?end/i, "Backend"],
-  [/android|ios\b|mobile/i, "Mobile"],
-  [/devops|site reliability|platform engineer/i, "DevOps"],
-  [/\bqa\b|quality assurance|test engineer/i, "QA"],
-  [/design/i, "Design"],
-  [/product manager/i, "Product"],
-  [/project manager/i, "Project Management"],
-  [/machine learning|\bai\b/i, "AI / ML"],
-  [/\bdata\b/i, "Data"],
-  [/marketing/i, "Marketing"],
-  [/sales/i, "Sales"],
-];
 const technologies = [
   "React",
   "Next.js",
@@ -218,20 +205,15 @@ export function normalize(raw: RawJob): NormalizedJob {
     description,
     descriptionHtml,
     shortDescription: description.replace(/\s+/g, " ").slice(0, 300),
-    category: categoryRules.find(([rule]) => rule.test(title))?.[1] ?? "Other",
+    category: classifyJob(title, raw.sourceCategories),
     location: raw.location?.trim() || "Not specified",
     city: raw.city || null,
     country: raw.country ? (countryMap[raw.country] ?? raw.country) : countryFromLocation(raw.location),
     region: raw.region || null,
     remoteType,
     employmentType: raw.employmentType || null,
-    experienceLevel: /\b(lead|principal|staff)\b/i.test(title)
-      ? "Lead"
-      : /\bsenior\b/i.test(title)
-        ? "Senior"
-        : /\b(junior|intern|entry.level)\b/i.test(title)
-          ? "Junior"
-          : null,
+    employmentKind: classifyEmploymentType(raw.employmentType),
+    experienceLevel: classifyExperienceLevel(title),
     salaryMin: currency ? (raw.salary?.min ?? null) : null,
     salaryMax: currency ? (raw.salary?.max ?? null) : null,
     currency,

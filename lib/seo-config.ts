@@ -1,16 +1,14 @@
+import { categories } from "@/features/jobs/types";
+
 export const MIN_JOBS_FOR_INDEXATION = 5;
 export const SITEMAP_PAGE_SIZE = 5000;
 
-export const seoCategories = [
-  { slug: "frontend", name: "Frontend" },
-  { slug: "backend", name: "Backend" },
-  { slug: "full-stack", name: "Full Stack" },
-  { slug: "devops", name: "DevOps" },
-  { slug: "qa", name: "QA" },
-  { slug: "design", name: "Design" },
-  { slug: "data", name: "Data" },
-  { slug: "ai-ml", name: "AI / ML" },
-] as const;
+export const seoCategories = categories
+  .filter((name) => name !== "Other")
+  .map((name) => ({
+    name,
+    slug: name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
+  }));
 
 export const seoTechnologies = [
   { slug: "react", name: "React" },

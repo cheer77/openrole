@@ -118,6 +118,7 @@ export async function syncSource(
           void companyName;
           const values = {
             ...jobFields,
+            categoryVersion: 1,
             publishedAt,
             sortDate: publishedAt ?? old?.firstSeenAt ?? now,
             lastCheckedAt: now,

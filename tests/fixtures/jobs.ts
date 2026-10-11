@@ -716,7 +716,7 @@ const seeds: Seed[] = [
   ],
 ];
 
-const workByCategory: Record<Exclude<Category, "Other">, string[]> = {
+const workByCategory: Partial<Record<Exclude<Category, "Other">, string[]>> = {
   Frontend: [
     "Build accessible, responsive interfaces with careful attention to interaction details.",
     "Improve rendering performance and evolve a maintainable component system.",
@@ -835,7 +835,7 @@ export function getMockJobs(now = Date.now()): Job[] {
           preview,
           `As a ${title.toLowerCase()} at ${name}, you will work with a small, cross-functional team that values clear thinking, thoughtful execution, and a sustainable pace. You will have space to shape your work and a direct connection to the people using what you build.`,
         ],
-        responsibilities: workByCategory[category],
+        responsibilities: workByCategory[category] ?? [],
         requirements: [
           `${experience === "Junior" ? "Foundational knowledge and a portfolio or practical projects" : "Practical professional experience"} in ${category.toLowerCase()}.`,
           `Confidence working with ${tech.slice(0, 2).join(" and ")}.`,

@@ -11,7 +11,7 @@ export async function generateMetadata({ searchParams }: { searchParams: Promise
   const page = keys.length === 1 && keys[0] === "page" ? Math.max(1, Number.parseInt(String(params.page), 10) || 1) : 1;
   return {
     title: "Find your next role",
-    description: "Explore current tech and digital jobs from company career pages.",
+    description: "Explore current jobs across industries from company career pages.",
     alternates: { canonical: page > 1 ? `/jobs?page=${page}` : "/jobs" },
     robots: robots(keys.length === 0),
   };

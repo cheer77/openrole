@@ -49,7 +49,7 @@ for (const job of jobs) {
       careerUrl: job.company.website,
       logoUrl:
         job.company.name === "Linear"
-          ? "http://127.0.0.1:3100/icon.svg"
+          ? "http://127.0.0.1:3100/logo/logo.webp"
           : null,
     },
   });
@@ -76,6 +76,9 @@ for (const job of jobs) {
       sourceId: source.id,
       category: job.category,
       location: job.location,
+      city: job.city || null,
+      employmentType: "Full-time",
+      employmentKind: "Full-time",
       remoteType: { Remote: "REMOTE", Hybrid: "HYBRID", "On-site": "ON_SITE" }[
         job.workType
       ],

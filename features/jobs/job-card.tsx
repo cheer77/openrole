@@ -48,19 +48,15 @@ export function JobCard({
             <Icon name="pin" size={15} />
             {locationLabel(job)}
           </span>
-          <span>
-            <Icon name="briefcase" size={15} />
-            {job.experience}
-          </span>
+          {job.employmentKind && <span><Icon name="briefcase" size={15} />{job.employmentKind}</span>}
+          {job.experience !== "Not specified" && <span>{job.experience}</span>}
         </div>
         <p className="job-preview">{job.shortDescription}</p>
       </div>
       <div className="job-card-bottom">
-        <div className="tech-tags">
-          {job.technologies.map((tech) => (
-            <span key={tech}>{tech}</span>
-          ))}
-        </div>
+        {job.technologies.length > 0 && <div className="tech-tags">
+          {job.technologies.map((tech) => <span key={tech}>{tech}</span>)}
+        </div>}
         <div className="posted-info">
           {fresh && <span className="new-badge">New today</span>}
           <time dateTime={job.publishedAt || job.firstSeenAt}>

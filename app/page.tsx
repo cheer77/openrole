@@ -6,13 +6,13 @@ import { CompanyLogo } from '@/components/company-logo';
 import { Icon } from '@/components/icon';
 import { SearchBar } from '@/components/search-bar';
 import { getJobs, getCompanies, companyPresentation } from '@/lib/api';
-import { categories, workTypes } from '@/features/jobs/types';
+import { workTypes, type Category } from '@/features/jobs/types';
 import { formatSalary, locationLabel, timeAgo } from '@/lib/format';
 
 export const metadata: Metadata = {
 	title: 'Discover your next role',
 	alternates: { canonical: '/' },
-	description: 'Explore tech and digital roles, companies, and flexible ways to work on vmiyou.',
+	description: 'Explore jobs across industries, companies, and flexible ways to work on vmiyou.',
 };
 
 const quickSearches = [
@@ -21,8 +21,14 @@ const quickSearches = [
 	{ label: 'Junior roles', href: '/jobs?experience=Junior' },
 	{ label: 'Frontend', href: '/jobs?category=Frontend' },
 	{ label: 'Design', href: '/jobs?category=Design' },
+	{ label: 'Sales', href: '/jobs?category=Sales' },
 ];
 const regions = ['Worldwide', 'Europe', 'Spain', 'UK', 'USA'] as const;
+const homeCategories = [
+	'Software Engineering', 'Sales', 'Marketing', 'Engineering',
+	'Construction & Trades', 'Manufacturing & Production',
+	'Logistics & Supply Chain', 'Healthcare', 'Retail & Hospitality', 'Finance & Accounting',
+] as const satisfies readonly Category[];
 
 export default async function Home() {
 	await connection();
@@ -170,7 +176,7 @@ export default async function Home() {
 							<h3>By discipline</h3>
 							<p>Find roles shaped around your strengths.</p>
 							<div className='home-explore-chips'>
-								{categories.slice(0, 10).map((category) => (
+								{homeCategories.map((category) => (
 									<Link href={`/jobs?category=${encodeURIComponent(category)}`} key={category}>
 										{category}
 									</Link>

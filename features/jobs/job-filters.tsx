@@ -4,7 +4,9 @@ import {
   categories,
   currencies,
   experiences,
+  employmentKinds,
   technologies,
+  supportsTechnologyFilter,
   type Filters,
 } from "./types";
 import { activeFilterCount, postedOptions } from "./filter-jobs";
@@ -74,12 +76,70 @@ export function JobFilters({
           <Select
             id={`${id}-category`}
             value={filters.category}
-            onChange={(value) => onChange({ category: value })}
+            onChange={(value) => onChange({
+              category: value,
+              ...(!supportsTechnologyFilter(value) ? { tech: [] } : {}),
+            })}
           >
             <option value="">All categories</option>
             {categories.map((value) => (
               <option key={value}>{value}</option>
             ))}
+          </Select>
+          <Icon name="down" size={15} />
+        </div>
+        {!supportsTechnologyFilter(filters.category) && (
+          <p className="filter-hint">Technologies are available for technical job categories.</p>
+        )}
+      </FilterSection>
+      <FilterSection title="Company" selected={Number(Boolean(filters.companyName))}>
+        <label className="filter-text-label" htmlFor={`${id}-company`}>
+          Company name
+        </label>
+        <input
+          id={`${id}-company`}
+          className="filter-text-input"
+          key={`company-${filters.companyName}`}
+          type="search"
+          maxLength={100}
+          placeholder="Search companies"
+          defaultValue={filters.companyName}
+          onBlur={(event) => {
+            const value = event.target.value.trim();
+            if (value !== filters.companyName) onChange({ companyName: value });
+          }}
+          onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }}
+        />
+      </FilterSection>
+      <FilterSection title="City or region" selected={Number(Boolean(filters.place))}>
+        <label className="filter-text-label" htmlFor={`${id}-place`}>
+          City, region or country
+        </label>
+        <input
+          id={`${id}-place`}
+          className="filter-text-input"
+          key={`place-${filters.place}`}
+          type="search"
+          maxLength={100}
+          placeholder="e.g. Berlin or Germany"
+          defaultValue={filters.place}
+          onBlur={(event) => {
+            const value = event.target.value.trim();
+            if (value !== filters.place) onChange({ place: value });
+          }}
+          onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }}
+        />
+      </FilterSection>
+      <FilterSection title="Employment type" selected={Number(Boolean(filters.employmentKind))}>
+        <label className="sr-only" htmlFor={`${id}-employment`}>Employment type</label>
+        <div className="select-wrap">
+          <Select
+            id={`${id}-employment`}
+            value={filters.employmentKind}
+            onChange={(value) => onChange({ employmentKind: value })}
+          >
+            <option value="">Any employment type</option>
+            {employmentKinds.map((value) => <option key={value}>{value}</option>)}
           </Select>
           <Icon name="down" size={15} />
         </div>
@@ -201,10 +261,10 @@ export function JobFilters({
             )}
         </fieldset>
       </FilterSection>
-      <FilterSection title="Technologies" selected={filters.tech.length}>
+      {supportsTechnologyFilter(filters.category) && <FilterSection title="Technologies" selected={filters.tech.length}>
         <fieldset className="filter-group">
           <legend className="sr-only">Tech stack</legend>
-          <p className="tech-hint">Match all selected technologies</p>
+          <p className="tech-hint">For technical roles. Match all selected technologies.</p>
           <div className="tech-options">
             {technologies.map((tech) => (
               <label className="check-row" key={tech}>
@@ -224,7 +284,7 @@ export function JobFilters({
             ))}
           </div>
         </fieldset>
-      </FilterSection>
+      </FilterSection>}
       <FilterSection
         title="Posted date"
         selected={Number(Boolean(filters.posted))}

@@ -65,11 +65,11 @@ export const metadata: Metadata = {
     "msapplication-TileImage": "/favicon/mstile-144x144.png",
   },
   title: {
-    default: "vmiyou — Find your next chapter in tech",
+    default: "vmiyou — Find your next job",
     template: "%s | vmiyou",
   },
   description:
-    "Discover tech and digital jobs with clear location requirements. Search remote, hybrid, and on-site opportunities around the world.",
+    "Discover jobs across industries with clear location requirements. Search remote, hybrid, and on-site opportunities around the world.",
   openGraph: {
     type: "website",
     siteName: "vmiyou",

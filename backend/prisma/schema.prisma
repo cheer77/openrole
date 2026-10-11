@@ -100,12 +100,14 @@ model Job {
   descriptionHtml String?
   shortDescription String
   category String
+  categoryVersion Int @default(0)
   location String
   city String?
   country String?
   region String?
   remoteType RemoteType @default(UNKNOWN)
   employmentType String?
+  employmentKind String?
   experienceLevel String?
   salaryMin Float?
   salaryMax Float?
@@ -132,6 +134,8 @@ model Job {
   @@index([status, sortDate, id])
   @@index([status, closedAt])
   @@index([status, category])
+  @@index([categoryVersion, id])
+  @@index([status, employmentKind])
   @@index([status, country])
   @@index([status, remoteType])
   @@index([status, companyId])

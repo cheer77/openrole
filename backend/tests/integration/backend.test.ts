@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import { normalize } from "../../src/providers/normalize.js";
 import { syncSource } from "../../src/sync.js";
 import { cleanupClosedJobs } from "../../src/cleanup.js";
+import { reclassifyJobs } from "../../src/jobs/reclassify.js";
 
 const testUrl = process.env.TEST_DATABASE_URL;
 if (!testUrl || !new URL(testUrl).pathname.endsWith("_test"))
@@ -81,13 +82,23 @@ test("PostgreSQL synchronization and API regression", async (t) => {
     await t.test(
       "API searches, filters, pagination and validation",
       async () => {
+        const imported = await db.job.findFirstOrThrow({ where: { sourceId: source.id } });
+        await db.job.update({ where: { id: imported.id }, data: {
+          category: "Other", categoryVersion: 0, employmentKind: null, employmentType: "Full-time",
+        } });
+        assert.equal((await reclassifyJobs(db)).changed >= 1, true);
+        const reclassified = await db.job.findUniqueOrThrow({ where: { id: imported.id } });
+        assert.equal(reclassified.category, "Frontend");
+        assert.equal(reclassified.categoryVersion, 1);
+        assert.equal(reclassified.employmentKind, "Full-time");
         const response = await fetch(
-          `${base}/jobs?search=Frontend&country=ES&remoteType=REMOTE&technologies=React,TypeScript&salaryMin=70000&currency=EUR&limit=1`,
+          `${base}/jobs?search=Frontend&country=ES&remoteType=REMOTE&technologies=React,TypeScript&salaryMin=70000&currency=EUR&employmentKind=Full-time&place=Madrid&companyName=Integration&limit=1`,
         );
         assert.equal(response.status, 200);
         const body = await response.json();
         assert.equal(body.total, 1);
         assert.equal(body.items.length, 1);
+        assert.equal((await (await fetch(`${base}/jobs?place=Spain&search=${encodeURIComponent(uid)}`)).json()).total, 1);
         for (const location of ["Spain", "Europe", "EU"]) {
           const geographic = await (
             await fetch(

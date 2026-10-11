@@ -1,12 +1,25 @@
 import { locationWhere } from "./location-query.js";
 import { z } from "zod";
 import type { Prisma } from "./generated/prisma/client.js";
+import { employmentKinds } from "./jobs/classification.js";
+
+const countryNames: Record<string, string> = {
+  germany: "DE", spain: "ES", france: "FR", italy: "IT", poland: "PL",
+  austria: "AT", switzerland: "CH", netherlands: "NL", belgium: "BE",
+  portugal: "PT", ireland: "IE", sweden: "SE", norway: "NO",
+  denmark: "DK", finland: "FI", "united kingdom": "GB", uk: "GB",
+  "united states": "US", usa: "US", canada: "CA", australia: "AU",
+  brazil: "BR", india: "IN", singapore: "SG", japan: "JP",
+};
 
 export const jobsQuerySchema = z
   .object({
     search: z.string().trim().max(150).optional(),
     category: z.string().trim().max(80).optional(),
     company: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(160).optional(),
+    companyName: z.string().trim().max(100).optional(),
+    place: z.string().trim().max(100).optional(),
+    employmentKind: z.enum(employmentKinds).optional(),
     location: z
       .enum([
         "Worldwide",
@@ -75,6 +88,17 @@ export function jobsQuery(input: unknown, now = new Date()) {
     });
   }
   if (query.location) AND.push(locationWhere(query.location));
+  if (query.place) {
+    const countryCode = countryNames[query.place.toLowerCase()];
+    AND.push({ OR: [
+      { location: { contains: query.place, mode: "insensitive" } },
+      { city: { contains: query.place, mode: "insensitive" } },
+      { region: { contains: query.place, mode: "insensitive" } },
+      { country: { contains: query.place, mode: "insensitive" } },
+      ...(countryCode ? [{ country: { equals: countryCode, mode: "insensitive" as const } }] : []),
+    ] });
+  }
+  if (query.companyName) AND.push({ company: { name: { contains: query.companyName, mode: "insensitive" } } });
   if (query.salaryMin !== undefined)
     AND.push({
       OR: [
@@ -109,6 +133,7 @@ export function jobsQuery(input: unknown, now = new Date()) {
       ? { region: { equals: query.region, mode: "insensitive" } }
       : {}),
     ...(query.remoteType ? { remoteType: query.remoteType } : {}),
+    ...(query.employmentKind ? { employmentKind: query.employmentKind } : {}),
     ...(query.experience ? { experienceLevel: query.experience } : {}),
     ...(query.technologies?.length
       ? { technologies: { hasEvery: query.technologies } }

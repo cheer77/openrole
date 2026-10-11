@@ -5,10 +5,11 @@ import {
   serializeFilters,
 } from "../features/jobs/filter-jobs.ts";
 import { apiJobsQuery, pageNumbers } from "../lib/api-query.ts";
+import { supportsTechnologyFilter } from "../features/jobs/types.ts";
 test("URL state round trips with repeated technologies", () => {
   const filters = parseFilters(
     new URLSearchParams(
-      "q=React&category=Frontend&location=Spain&tech=React&tech=TypeScript&page=2&posted=7&sort=oldest",
+      "q=React&category=Frontend&location=Spain&tech=React&tech=TypeScript&page=2&posted=7&sort=oldest&place=Madrid&companyName=Example&employmentKind=Full-time",
     ),
   );
   assert.deepEqual(parseFilters(serializeFilters(filters)), filters);
@@ -25,11 +26,22 @@ test("invalid URL input is normalized to API limits", () => {
   assert.equal(filters.sort, "newest");
   assert.deepEqual(filters.tech, ["React"]);
 });
+test("technology filters apply only to technical job categories", () => {
+  assert.equal(supportsTechnologyFilter(""), true);
+  assert.equal(supportsTechnologyFilter("Frontend"), true);
+  assert.equal(supportsTechnologyFilter("Logistics & Supply Chain"), false);
+  const logistics = parseFilters(new URLSearchParams("category=Logistics+%26+Supply+Chain&tech=React"));
+  assert.deepEqual(logistics.tech, []);
+  assert.equal(apiJobsQuery(logistics).has("technologies"), false);
+  assert.equal(serializeFilters(logistics).has("tech"), false);
+  const frontend = parseFilters(new URLSearchParams("category=Frontend&tech=React"));
+  assert.deepEqual(frontend.tech, ["React"]);
+});
 test("UI query maps to backend contract without leaking UI keys", () => {
   const query = apiJobsQuery(
     parseFilters(
       new URLSearchParams(
-        "q=Node&location=Spain&workType=Remote&tech=React&tech=TypeScript&salaryMin=90000&sort=salary-high&page=2",
+        "q=Node&location=Spain&workType=Remote&tech=React&tech=TypeScript&salaryMin=90000&sort=salary-high&page=2&place=Berlin&companyName=Acme&employmentKind=Contract",
       ),
     ),
   );
@@ -37,6 +49,9 @@ test("UI query maps to backend contract without leaking UI keys", () => {
   assert.equal(query.get("location"), "Spain");
   assert.equal(query.get("remoteType"), "REMOTE");
   assert.equal(query.get("technologies"), "React,TypeScript");
+  assert.equal(query.get("place"), "Berlin");
+  assert.equal(query.get("companyName"), "Acme");
+  assert.equal(query.get("employmentKind"), "Contract");
   assert.equal(query.get("currency"), "USD");
   assert.equal(query.get("limit"), "8");
   assert.equal(query.get("page"), "2");

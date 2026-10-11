@@ -187,6 +187,42 @@ test("desktop or mobile filters support category, geography, experience, date, t
   await expect(page).toHaveURL(/salaryMin=100000/);
 });
 
+test("industry, company, city and employment filters work on desktop and mobile", async ({ page }, testInfo) => {
+  await page.goto("/jobs");
+  const mobile = testInfo.project.name.startsWith("mobile");
+  if (mobile) await page.locator(".mobile-filter-button").click();
+  const panel = mobile ? page.getByRole("dialog") : page.getByRole("complementary", { name: "Job filters" });
+  await selectOption(panel.getByRole("combobox", { name: "Job category" }), "Sales");
+  await panel.getByRole("searchbox", { name: "Company name" }).fill("Personio");
+  await panel.getByRole("searchbox", { name: "Company name" }).press("Enter");
+  await panel.getByRole("searchbox", { name: "City, region or country" }).fill("Berlin");
+  await panel.getByRole("searchbox", { name: "City, region or country" }).press("Enter");
+  await selectOption(panel.getByRole("combobox", { name: "Employment type" }), "Full-time");
+  if (mobile) await panel.getByRole("button", { name: /Show .* jobs/ }).click();
+  await expect(page.locator(".job-card h3")).toHaveText("Sales Development Representative");
+  await expect(page).toHaveURL(/employmentKind=Full-time/);
+  await expect(page).toHaveURL(/place=Berlin/);
+});
+
+test("switching to a nontechnical category clears technologies", async ({ page }, testInfo) => {
+  await page.goto("/jobs?category=Frontend&tech=React");
+  const mobile = testInfo.project.name.startsWith("mobile");
+  if (mobile) await page.locator(".mobile-filter-button").click();
+  const panel = mobile ? page.getByRole("dialog") : page.getByRole("complementary", { name: "Job filters" });
+  await expect(panel.getByRole("checkbox", { name: "React", exact: true })).toBeChecked();
+  await selectOption(panel.getByRole("combobox", { name: "Job category" }), "Logistics & Supply Chain");
+  await expect(panel.getByRole("checkbox", { name: "React", exact: true })).toHaveCount(0);
+  await expect(panel.getByText("Technologies are available for technical job categories.")).toBeVisible();
+  if (mobile) await panel.getByRole("button", { name: /Show .* jobs/ }).click();
+  await expect(page).toHaveURL(/category=Logistics/);
+  await expect(page).not.toHaveURL(/tech=/);
+  await expect(page.getByRole("button", { name: "Remove React filter" })).toHaveCount(0);
+  await page.goto("/jobs?category=Frontend&tech=React");
+  await page.getByRole("button", { name: "Logistics & Supply Chain", exact: true }).click();
+  await expect(page).toHaveURL(/category=Logistics/);
+  await expect(page).not.toHaveURL(/tech=/);
+});
+
 test("responsive layout fits viewport and captures the product", async ({
   page,
 }, testInfo) => {

@@ -42,6 +42,13 @@ const quickFilters: {
 		'Product',
 		'Data',
 		'AI / ML',
+		'Sales',
+		'Marketing',
+		'Construction & Trades',
+		'Manufacturing & Production',
+		'Logistics & Supply Chain',
+		'Healthcare',
+		'Retail & Hospitality',
 	].map((category) => ({
 		label: category,
 		patch: { category },
@@ -161,7 +168,7 @@ export function JobsExplorer({
 	}
 	const activeChips: { label: string; patch: Partial<Filters> }[] = [
 		...(filters.q ? [{ label: `“${filters.q}”`, patch: { q: '' } }] : []),
-		...(['category', 'location', 'workType', 'experience', 'currency'] as const)
+		...(['category', 'location', 'workType', 'experience', 'employmentKind', 'place', 'companyName', 'currency'] as const)
 			.filter((key) => filters[key])
 			.map((key) => ({
 				label: filters[key],
@@ -333,7 +340,7 @@ export function JobsExplorer({
 						<p aria-live="polite" role="status">
 							{filters.q
 								? `Results for “${filters.q}”`
-								: 'Tech & digital careers, in one place'}
+								: 'Jobs across industries, in one place'}
 						</p>
 						<span className="demo-label">
 							<span className="tiny-dot" />

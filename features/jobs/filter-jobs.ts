@@ -2,8 +2,10 @@ import {
   categories,
   currencies,
   experiences,
+  employmentKinds,
   locations,
   technologies,
+  supportsTechnologyFilter,
   workTypes,
   type Filters,
 } from "./types.ts";
@@ -32,9 +34,13 @@ export function parseFilters(params: URLSearchParams): Filters {
     ) || "newest";
   const salaryMin = amount(params.get("salaryMin"));
   const salaryMax = amount(params.get("salaryMax"));
+  const category = valid(params.get("category"), categories);
   return {
     q: (params.get("q") || "").trim().slice(0, 150),
-    category: valid(params.get("category"), categories),
+    category,
+    companyName: (params.get("companyName") || "").trim().slice(0, 100),
+    place: (params.get("place") || "").trim().slice(0, 100),
+    employmentKind: valid(params.get("employmentKind"), employmentKinds),
     location: valid(params.get("location"), locations),
     workType: valid(params.get("workType"), workTypes),
     experience: valid(params.get("experience"), experiences),
@@ -44,7 +50,7 @@ export function parseFilters(params: URLSearchParams): Filters {
     currency:
       valid(params.get("currency"), currencies) ||
       (salaryMin || salaryMax || sort.startsWith("salary") ? "USD" : ""),
-    tech: [
+    tech: supportsTechnologyFilter(category) ? [
       ...new Set(
         params
           .getAll("tech")
@@ -52,7 +58,7 @@ export function parseFilters(params: URLSearchParams): Filters {
             technologies.includes(value as (typeof technologies)[number]),
           ),
       ),
-    ],
+    ] : [],
     sort,
     page: Math.max(
       1,
@@ -78,6 +84,9 @@ export function activeFilterCount(filters: Filters): number {
   return (
     [
       "category",
+      "companyName",
+      "place",
+      "employmentKind",
       "location",
       "workType",
       "experience",

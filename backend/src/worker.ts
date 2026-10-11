@@ -8,6 +8,7 @@ import { cleanupClosedJobs } from "./cleanup.js";
 import { getProvider } from "./providers/providers.js";
 import { isTransientProviderError } from "./providers/http.js";
 import { bootstrapDiscovery, discoverCompany } from "./discovery/index.js";
+import { reclassifyJobs } from "./jobs/reclassify.js";
 
 async function main() {
   const db = createDb();
@@ -27,6 +28,10 @@ async function main() {
   await queue.upsertJobScheduler(
     "daily-discovery", { every: 86400000 }, { name: "discover-all", data: {} },
   );
+  await queue.upsertJobScheduler(
+    "daily-reclassify", { every: 86400000 }, { name: "reclassify-jobs", data: {} },
+  );
+  await queue.add("reclassify-jobs", {}, { deduplication: { id: "reclassify-jobs" } });
   await queue.add("discover-all", {}, { deduplication: { id: "discover-all" } });
   const worker = new Worker<{ sourceId?: string; companyId?: string; force?: boolean }>(
     queueName,
@@ -36,6 +41,7 @@ async function main() {
         return { queued: await enqueueSources(queue, db) };
       }
       if (job.name === "cleanup") return cleanupClosedJobs(db);
+      if (job.name === "reclassify-jobs") return reclassifyJobs(db);
       if (job.name === "discover-all") {
         const bootstrap = await bootstrapDiscovery(db);
         for (const sourceId of bootstrap.createdSourceIds)
@@ -134,7 +140,7 @@ async function main() {
   process.once("SIGTERM", () => {
     void stop();
   });
-  console.log("Sync worker ready; hourly imports, daily cleanup and discovery enabled");
+  console.log("Sync worker ready; hourly imports, daily cleanup, discovery and taxonomy maintenance enabled");
 }
 void main().catch((error: unknown) => {
   console.error(error);

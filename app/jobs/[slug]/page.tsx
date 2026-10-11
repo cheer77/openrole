@@ -77,17 +77,16 @@ export default async function JobDetails({ params, searchParams }: Props) {
                 {locationLabel(job)}
               </span>
               <span className="remote-pill">{job.workType}</span>
-              <span>{job.experience}</span>
+              {job.employmentKind && <span>{job.employmentKind}</span>}
+              {job.experience !== "Not specified" && <span>{job.experience}</span>}
             </div>
             <div className="detail-salary">
               {formatSalary(job.salary)}
               {job.salary && <span> {job.salary.currency} / year</span>}
             </div>
-            <div className="tech-tags">
-              {job.technologies.map((tech) => (
-                <span key={tech}>{tech}</span>
-              ))}
-            </div>
+            {job.technologies.length > 0 && <div className="tech-tags">
+              {job.technologies.map((tech) => <span key={tech}>{tech}</span>)}
+            </div>}
           </header>
           <div className="detail-copy">
             {!active && <div className="closed-job-notice" role="status">

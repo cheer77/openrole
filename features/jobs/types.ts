@@ -10,9 +10,30 @@ export const categories = [
   "Project Management",
   "Data",
   "AI / ML",
+  "Cybersecurity",
+  "IT & Infrastructure",
+  "Software Engineering",
+  "Engineering",
+  "Construction & Trades",
+  "Manufacturing & Production",
+  "Logistics & Supply Chain",
+  "Retail & Hospitality",
+  "Healthcare",
+  "Education",
+  "Finance & Accounting",
+  "Legal & Compliance",
+  "HR & Recruiting",
+  "Customer Service",
   "Marketing",
   "Sales",
+  "Operations & Administration",
+  "Consulting",
+  "Science & Research",
   "Other",
+] as const;
+export const employmentKinds = [
+  "Full-time", "Part-time", "Contract", "Temporary", "Freelance",
+  "Internship", "Apprenticeship", "Working student",
 ] as const;
 export const locations = [
   "Worldwide",
@@ -43,7 +64,15 @@ export const technologies = [
   "Docker",
   "Kubernetes",
 ] as const;
-export const currencies = ["USD", "EUR", "GBP"] as const;
+const technicalCategories = new Set<string>([
+  "Frontend", "Backend", "Full Stack", "Mobile", "DevOps", "QA",
+  "Data", "AI / ML", "Cybersecurity", "IT & Infrastructure",
+  "Software Engineering",
+]);
+export function supportsTechnologyFilter(category: string): boolean {
+  return !category || technicalCategories.has(category);
+}
+export const currencies = ["USD", "EUR", "GBP", "CAD", "AUD", "CHF", "PLN", "SEK", "NOK", "DKK", "INR", "BRL"] as const;
 export type Category = (typeof categories)[number];
 export type Location = (typeof locations)[number];
 export type WorkType = (typeof workTypes)[number];
@@ -73,6 +102,7 @@ export interface Job {
   employmentType?: string | null;
   workType: WorkType | "Not specified";
   experience: string;
+  employmentKind?: string | null;
   salary?: { min: number | null; max: number | null; currency: string };
   technologies: string[];
   publishedAt: string | null;
@@ -88,6 +118,9 @@ export interface Job {
 export interface Filters {
   q: string;
   category: string;
+  companyName: string;
+  place: string;
+  employmentKind: string;
   location: string;
   workType: string;
   experience: string;
