@@ -180,7 +180,7 @@ class ApiController {
     const { page, limit, search } = parsed.data;
     const where = {
       enabled: true,
-      sources: { some: { enabled: true } },
+      jobs: { some: { status: "ACTIVE" as const, source: { enabled: true } } },
       ...(search
         ? { name: { contains: search, mode: "insensitive" as const } }
         : {}),

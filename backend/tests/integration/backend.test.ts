@@ -269,6 +269,39 @@ test("PostgreSQL synchronization and API regression", async (t) => {
     });
 
     await t.test(
+      "companies from aggregate jobs appear publicly without owning a source",
+      async () => {
+        const aggregate = await db.company.create({ data: {
+          name: `Aggregate ${uid}`, slug: `aggregate-${uid}`,
+        } });
+        const employerName = `Employer ${uid}`;
+        const aggregateSource = await db.source.create({ data: {
+          name: "Aggregate board", type: "ASHBY",
+          sourceIdentifier: `aggregate-${uid}`, companyId: aggregate.id, enabled: true,
+        } });
+        try {
+          await syncSource(db, aggregateSource.id, { fetch: async () => [{
+            ...original, externalId: "employer-job", companyName: employerName,
+          }] });
+          const employer = await db.company.findFirstOrThrow({ where: { name: employerName } });
+          assert.equal(await db.source.count({ where: { companyId: employer.id } }), 0);
+          const listed = await (await fetch(`${base}/companies?search=${encodeURIComponent(employerName)}`)).json();
+          assert.equal(listed.total, 1);
+          assert.equal(listed.items[0].slug, employer.slug);
+          assert.equal(listed.items[0]._count.jobs, 1);
+          await db.source.update({ where: { id: aggregateSource.id }, data: { enabled: false } });
+          const hidden = await (await fetch(`${base}/companies?search=${encodeURIComponent(employerName)}`)).json();
+          assert.equal(hidden.total, 0);
+        } finally {
+          await db.job.deleteMany({ where: { sourceId: aggregateSource.id } });
+          await db.source.delete({ where: { id: aggregateSource.id } });
+          await db.company.deleteMany({ where: { name: employerName } });
+          await db.company.delete({ where: { id: aggregate.id } });
+        }
+      },
+    );
+
+    await t.test(
       "hidden jobs and disabled sources stay out of public results",
       async () => {
         const job = await db.job.findFirstOrThrow({
