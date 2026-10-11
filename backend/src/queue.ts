@@ -1,10 +1,11 @@
 import { Queue } from "bullmq";
 import { redisConnection } from "./config.js";
 import type { PrismaClient } from "./generated/prisma/client.js";
+import { dueDiscoveryCompanies } from "./discovery/index.js";
 
 export const queueName = "openrole-sync";
 export function createQueue() {
-  return new Queue<{ sourceId?: string }>(queueName, {
+  return new Queue<{ sourceId?: string; companyId?: string; force?: boolean }>(queueName, {
     connection: redisConnection(),
     defaultJobOptions: {
       attempts: 3,
@@ -13,6 +14,16 @@ export function createQueue() {
       removeOnFail: { count: 200 },
     },
   });
+}
+
+export async function enqueueCompanyDiscovery(
+  queue: ReturnType<typeof createQueue>, db: PrismaClient, sourceId?: string,
+) {
+  const companies = await dueDiscoveryCompanies(db, sourceId);
+  for (const company of companies) await queue.add("company-discovery", { companyId: company.id }, {
+    deduplication: { id: `discovery:${company.id}` },
+  });
+  return companies.length;
 }
 
 export async function enqueueSources(

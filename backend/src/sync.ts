@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import type { PrismaClient } from "./generated/prisma/client.js";
 import { getProvider, type JobProvider } from "./providers/providers.js";
 import { normalizedJobSchema } from "./providers/normalize.js";
+import { normalizedCompanyName } from "./discovery/detect.js";
 
 export function jobSlug(title: string, sourceId: string, externalId: string, companySlug = "", location = "") {
   const base =
@@ -17,6 +18,12 @@ export function jobSlug(title: string, sourceId: string, externalId: string, com
     .digest("hex")
     .slice(0, 20);
   return `${base}-${hash}`;
+}
+
+function importedCompanySlug(name: string) {
+  const base = name.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80) || "employer";
+  return `${base}-${createHash("sha256").update(name.toLowerCase()).digest("hex").slice(0, 12)}`;
 }
 
 export async function syncSource(
@@ -80,12 +87,37 @@ export async function syncSource(
         );
         let created = 0;
         let updated = 0;
+        const companies = new Map<string, { id: string; slug: string }>();
         for (const job of jobs) {
           if (deleted.has(job.externalId)) continue;
           const old = byId.get(job.externalId);
+          let company = { id: source.companyId, slug: source.company.slug };
+          if (job.companyName) {
+            const name = job.companyName;
+            const cached = companies.get(name);
+            if (cached) company = cached;
+            else {
+              const slug = importedCompanySlug(name);
+              const sameName = await tx.company.findMany({ where: { OR: [
+                { normalizedName: normalizedCompanyName(name) },
+                { name: { equals: name, mode: "insensitive" } },
+              ] }, take: 2 });
+              const record = sameName.length === 1 ? sameName[0]! : await tx.company.upsert({
+                where: { slug }, create: {
+                  name, slug, normalizedName: normalizedCompanyName(name),
+                  enabled: true, discoveredFrom: `job:${source.type}`,
+                  discoveredAt: now, discoveryStatus: "PENDING",
+                }, update: {},
+              });
+              company = { id: record.id, slug: record.slug };
+              companies.set(name, company);
+            }
+          }
           const publishedAt = job.publishedAt ?? old?.publishedAt ?? null;
+          const { companyName, ...jobFields } = job;
+          void companyName;
           const values = {
-            ...job,
+            ...jobFields,
             publishedAt,
             sortDate: publishedAt ?? old?.firstSeenAt ?? now,
             lastCheckedAt: now,
@@ -93,7 +125,7 @@ export async function syncSource(
             missingSince: null,
             missingCount: 0,
             closedAt: old?.statusOverride && old.status === "CLOSED" ? old.closedAt : null,
-            companyId: source.companyId,
+            companyId: company.id,
           };
           await tx.job.upsert({
             where: {
@@ -102,7 +134,7 @@ export async function syncSource(
             create: {
               ...values,
               sourceId,
-              slug: priorSlug.get(job.externalId) ?? jobSlug(job.title, sourceId, job.externalId, source.company.slug, job.city ?? job.country ?? ""),
+              slug: priorSlug.get(job.externalId) ?? jobSlug(job.title, sourceId, job.externalId, company.slug, job.city ?? job.country ?? ""),
               firstSeenAt: now,
             },
             update: {

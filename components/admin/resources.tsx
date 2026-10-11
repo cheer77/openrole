@@ -353,6 +353,7 @@ export function ResourceList({ resource, initialEntity, initialStatus }: { resou
                                   {item.lastError}
                                 </small>
                               )}
+                              <small>{item.lastError ? "Last sync failed" : item.lastSuccessfulSync ? "Last sync succeeded" : "Not synced yet"}</small>
                             </td>
                             <td>
                               <span
@@ -408,6 +409,12 @@ export function ResourceList({ resource, initialEntity, initialStatus }: { resou
                                 >
                                   Sync now
                                 </button>
+                                {item.type === "USAJOBS" && (
+                                  <button disabled={busy} onClick={() => void change(
+                                    `sources/${item.id}/test`, "POST", {},
+                                    "Connection test queued. Check Import logs for the result.",
+                                  )}>Test connection</button>
+                                )}
                               </div>
                             </td>
                           </>
@@ -812,6 +819,9 @@ function Editor({
                       "SMARTRECRUITERS",
                       "PERSONIO",
                       "RECRUITEE",
+                      "USAJOBS",
+                      "CANADA_JOB_BANK",
+                      "ARBEITNOW",
                     ].map((v) => (
                       <option key={v}>{v}</option>
                     ))}
@@ -828,10 +838,11 @@ function Editor({
                   />
                 </label>
                 <p className="admin-muted">
-                  Board identifier, not a URL. For a Lever EU board use
-                  eu:board-name. Personio uses company for .com or de:company
-                  for .de. Recruitee uses the careers subdomain; SmartRecruiters
-                  uses the company identifier.
+                  Board identifier, not a URL. Greenhouse uses its board token;
+                  Lever uses its site slug (eu:slug for EU). USAJOBS uses public,
+                  Arbeitnow uses all, and Canada Job Bank uses official-en.
+                  Canada’s current historical CSV lacks active application URLs,
+                  so its sync reports an error until an official feed supplies them.
                 </p>
               </>
             )}

@@ -36,9 +36,12 @@ export const normalizedJobSchema = z
       .regex(/^[A-Z]{3}$/)
       .nullable(),
     technologies: z.array(z.string()),
+    sourceCategories: z.array(z.string()),
     sourceUrl: httpUrl,
     applyUrl: httpUrl,
     publishedAt: z.date().nullable(),
+    sourceUpdatedAt: z.date().nullable(),
+    companyName: z.string().min(1).max(120).nullable(),
   })
   .refine(
     (job) =>
@@ -56,7 +59,11 @@ export type RawJob = {
   location?: string;
   sourceUrl: string;
   applyUrl: string;
-  publishedAt?: string | number | null;
+  publishedAt?: string | number | Date | null;
+  sourceUpdatedAt?: string | number | Date | null;
+  companyName?: string | null;
+  sourceCategories?: string[];
+  technologies?: string[];
   workplace?: string;
   employmentType?: string | null;
   city?: string | null;
@@ -157,6 +164,10 @@ export function normalize(raw: RawJob): NormalizedJob {
     raw.publishedAt === undefined || raw.publishedAt === null
       ? null
       : new Date(raw.publishedAt);
+  const sourceUpdatedAt =
+    raw.sourceUpdatedAt === undefined || raw.sourceUpdatedAt === null
+      ? null
+      : new Date(raw.sourceUpdatedAt);
   const countryMap: Record<string, string> = {
     USA: "US",
     "United States": "US",
@@ -193,10 +204,13 @@ export function normalize(raw: RawJob): NormalizedJob {
       new RegExp(
         `(?<![a-z0-9])${technology.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![a-z0-9])`,
         "i",
-      ).test(text),
+      ).test(text) || (raw.technologies ?? []).some((tag) => tag.toLowerCase() === technology.toLowerCase()),
     ),
+    sourceCategories: (raw.sourceCategories ?? []).filter(Boolean).slice(0, 30),
     sourceUrl: raw.sourceUrl,
     applyUrl: raw.applyUrl,
     publishedAt,
+    sourceUpdatedAt,
+    companyName: raw.companyName?.trim() || null,
   });
 }

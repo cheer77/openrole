@@ -18,7 +18,7 @@ export function AdminNav() {
       <nav aria-label="Admin navigation">
         {[
           { label: "Workspace", links: [["Overview", "/admin"], ["Analytics", "/admin/analytics"]] },
-          { label: "Management", links: [["Jobs", "/admin/jobs"], ["Companies", "/admin/companies"], ["Sources", "/admin/sources"], ["Import logs", "/admin/logs"]] },
+          { label: "Management", links: [["Jobs", "/admin/jobs"], ["Companies", "/admin/companies"], ["Sources", "/admin/sources"], ["Discovery", "/admin/discovery"], ["Import logs", "/admin/logs"]] },
           { label: "Platform", links: [["Integrations", "/admin/integrations"], ["System", "/admin/system"], ["Audit log", "/admin/audit-logs"]] },
         ].map((group) => <div className="admin-nav-group" key={group.label}>
           <span className="admin-nav-label">{group.label}</span>

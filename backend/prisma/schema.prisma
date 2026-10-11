@@ -16,6 +16,9 @@ enum SourceType {
   SMARTRECRUITERS
   PERSONIO
   RECRUITEE
+  USAJOBS
+  CANADA_JOB_BANK
+  ARBEITNOW
   MANUAL
 }
 
@@ -41,10 +44,28 @@ model Company {
   website String?
   careerUrl String?
   country String?
+  websiteDomain String?
+  normalizedName String?
+  discoveredFrom String?
+  discoveredAt DateTime?
+  discoveryStatus String @default("PENDING")
+  lastDiscoveryAt DateTime?
+  discoveryAttempts Int @default(0)
+  nextRetryAt DateTime?
+  detectedAts String?
+  detectedIdentifier String?
+  discoveryConfidence String?
+  validationStatus String?
+  discoveryError String?
+  discoverySourceId String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   sources Source[]
   jobs Job[]
+  @@index([websiteDomain])
+  @@index([normalizedName])
+  @@index([discoveryStatus, nextRetryAt])
+  @@index([discoverySourceId])
 }
 
 model Source {
@@ -90,9 +111,11 @@ model Job {
   salaryMax Float?
   currency String?
   technologies String[] @default([])
+  sourceCategories String[] @default([])
   sourceUrl String
   applyUrl String
   publishedAt DateTime?
+  sourceUpdatedAt DateTime?
   firstSeenAt DateTime @default(now())
   lastSeenAt DateTime?
   lastCheckedAt DateTime

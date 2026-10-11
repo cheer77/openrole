@@ -1,10 +1,12 @@
 import { retainData } from "./analytics.js";
 import { Worker } from "bullmq";
 import { createDb } from "./db.js";
-import { createQueue, enqueueSources, queueName } from "./queue.js";
+import { createQueue, enqueueSources, enqueueCompanyDiscovery, queueName } from "./queue.js";
 import { redisConnection } from "./config.js";
 import { syncSource } from "./sync.js";
 import { cleanupClosedJobs } from "./cleanup.js";
+import { getProvider } from "./providers/providers.js";
+import { bootstrapDiscovery, discoverCompany } from "./discovery/index.js";
 
 async function main() {
   const db = createDb();
@@ -21,7 +23,11 @@ async function main() {
     { every: 86400000 },
     { name: "cleanup", data: {} },
   );
-  const worker = new Worker<{ sourceId?: string }>(
+  await queue.upsertJobScheduler(
+    "daily-discovery", { every: 86400000 }, { name: "discover-all", data: {} },
+  );
+  await queue.add("discover-all", {}, { deduplication: { id: "discover-all" } });
+  const worker = new Worker<{ sourceId?: string; companyId?: string; force?: boolean }>(
     queueName,
     async (job) => {
       if (job.name === "all") {
@@ -29,9 +35,61 @@ async function main() {
         return { queued: await enqueueSources(queue, db) };
       }
       if (job.name === "cleanup") return cleanupClosedJobs(db);
+      if (job.name === "discover-all") {
+        const bootstrap = await bootstrapDiscovery(db);
+        for (const sourceId of bootstrap.createdSourceIds)
+          await enqueueSources(queue, db, sourceId);
+        return { companiesAdded: bootstrap.added, sourcesAdded: bootstrap.createdSourceIds.length,
+          queued: await enqueueCompanyDiscovery(queue, db) };
+      }
+      if (job.name === "company-discovery" && job.data.companyId) {
+        const result = await discoverCompany(db, job.data.companyId, job.data.force);
+        if ("sourceId" in result && result.sourceId && "imported" in result)
+          await enqueueCompanyDiscovery(queue, db, result.sourceId);
+        return result;
+      }
+      if (job.name === "test" && job.data.sourceId) {
+        const source = await db.source.findUniqueOrThrow({ where: { id: job.data.sourceId } });
+        const log = await db.importLog.create({ data: { sourceId: source.id, status: "RUNNING" } });
+        try {
+          const provider = getProvider(source.type);
+          if (!provider.testConnection) throw new Error("Connection test unavailable for this provider");
+          await provider.testConnection(source.sourceIdentifier);
+          await db.importLog.update({ where: { id: log.id }, data: { status: "TEST_SUCCESS", finishedAt: new Date() } });
+          return { connected: true };
+        } catch (error) {
+          await db.importLog.update({ where: { id: log.id }, data: {
+            status: "TEST_FAILED", finishedAt: new Date(),
+            error: error instanceof Error ? error.message.slice(0, 1000) : "Connection test failed",
+          } });
+          throw error;
+        }
+      }
       if (job.name !== "source" || !job.data.sourceId)
         throw new Error("Invalid sync job");
-      return syncSource(db, job.data.sourceId);
+      const sourceId = job.data.sourceId;
+      try {
+        const result = await syncSource(db, sourceId);
+        if ("found" in result) {
+          await db.company.updateMany({ where: { sources: { some: { id: sourceId } }, validationStatus: "CATALOG" },
+            data: { discoveryStatus: "ENABLED", validationStatus: "VALID", discoveryError: null } });
+          await enqueueCompanyDiscovery(queue, db, sourceId);
+        }
+        return result;
+      } catch (error) {
+        const source = await db.source.findUnique({ where: { id: sourceId }, select: { companyId: true } });
+        if (source) {
+          const company = await db.company.findUnique({ where: { id: source.companyId }, select: { validationStatus: true } });
+          if (company?.validationStatus === "CATALOG") {
+            const reason = error instanceof Error ? error.message.slice(0, 1000) : "Catalog source validation failed";
+            await db.source.update({ where: { id: sourceId }, data: { enabled: false } });
+            await db.company.update({ where: { id: source.companyId }, data: {
+              discoveryStatus: "REVIEW", validationStatus: "FAILED", discoveryError: reason,
+            } });
+          }
+        }
+        throw error;
+      }
     },
     { connection: redisConnection(), concurrency: 2 },
   );
@@ -70,7 +128,7 @@ async function main() {
   process.once("SIGTERM", () => {
     void stop();
   });
-  console.log("Sync worker ready; hourly imports and daily cleanup enabled");
+  console.log("Sync worker ready; hourly imports, daily cleanup and discovery enabled");
 }
 void main().catch((error: unknown) => {
   console.error(error);

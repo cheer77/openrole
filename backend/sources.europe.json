@@ -389,5 +389,17 @@
       "website": "https://www.devoteam.com",
       "careerUrl": "https://careers.smartrecruiters.com/Devoteam"
     }
+  },
+  {
+    "name": "Arbeitnow European jobs",
+    "type": "ARBEITNOW",
+    "sourceIdentifier": "all",
+    "enabled": true,
+    "company": {
+      "name": "Arbeitnow",
+      "slug": "arbeitnow-source",
+      "website": "https://www.arbeitnow.com",
+      "careerUrl": "https://www.arbeitnow.com"
+    }
   }
 ]

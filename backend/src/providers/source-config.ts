@@ -7,6 +7,9 @@ export const importSourceTypes = [
   "SMARTRECRUITERS",
   "PERSONIO",
   "RECRUITEE",
+  "USAJOBS",
+  "CANADA_JOB_BANK",
+  "ARBEITNOW",
 ] as const;
 export const sourceIdentifierSchema = z
   .string()
@@ -21,6 +24,9 @@ export function validSourceIdentifier(source: {
   const { type, sourceIdentifier: id } = source;
   if (id.startsWith("eu:") && type !== "LEVER") return false;
   if (id.startsWith("de:") && type !== "PERSONIO") return false;
+  if (type === "USAJOBS") return id === "public";
+  if (type === "CANADA_JOB_BANK") return id === "official-en";
+  if (type === "ARBEITNOW") return id === "all";
   // These identifiers are DNS labels, not arbitrary URL fragments.
   if (["PERSONIO", "RECRUITEE"].includes(type))
     return /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i.test(

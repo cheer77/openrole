@@ -64,6 +64,8 @@ services:
     environment:
       DATABASE_URL: postgresql://openrole:${POSTGRES_PASSWORD:-openrole_local}@postgres:5432/openrole
       REDIS_URL: redis://redis:6379
+      USAJOBS_API_KEY: ${USAJOBS_API_KEY:-}
+      USAJOBS_USER_AGENT: ${USAJOBS_USER_AGENT:-}
     depends_on:
       api: { condition: service_healthy }
     command: ["npm", "run", "worker"]

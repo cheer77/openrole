@@ -40,6 +40,8 @@ import {
 } from "./providers/source-config.js";
 import { createQueue, enqueueSources } from "./queue.js";
 import type { Prisma, Job } from "./generated/prisma/client.js";
+import { createSourceForReview, discoveryMetrics } from "./discovery/index.js";
+import { normalizedCompanyName, websiteDomain } from "./discovery/detect.js";
 function parse<T>(schema: z.ZodType<T>, input: unknown): T {
   const parsed = schema.safeParse(input);
   if (!parsed.success)
@@ -343,7 +345,12 @@ export class AdminController {
     if (await this.db.client.company.findUnique({ where: { slug: data.slug } }))
       throw new ConflictException("Company slug already exists");
     return this.db.client.$transaction(async (tx) => {
-      const company = await tx.company.create({ data });
+      const company = await tx.company.create({ data: {
+        ...data, websiteDomain: data.website ? websiteDomain(data.website) : null,
+        normalizedName: normalizedCompanyName(data.name),
+        discoveredFrom: "admin", discoveredAt: new Date(),
+        discoveryStatus: data.website || data.careerUrl ? "PENDING" : "REVIEW",
+      } });
       await audit(tx, "COMPANY_CREATED", "company", company.id);
       return company;
     });
@@ -362,7 +369,17 @@ export class AdminController {
     )
       throw new ConflictException("Company slug already exists");
     return this.db.client.$transaction(async (tx) => {
-      const company = await tx.company.update({ where: { id }, data });
+      const prior = await tx.company.findUniqueOrThrow({ where: { id }, include: { _count: { select: { sources: true } } } });
+      const changedSite = prior.website !== data.website || prior.careerUrl !== data.careerUrl;
+      const company = await tx.company.update({ where: { id }, data: {
+        ...data, websiteDomain: data.website ? websiteDomain(data.website) : null,
+        ...(data.name ? { normalizedName: normalizedCompanyName(data.name) } : {}),
+        ...(changedSite && !prior._count.sources ? {
+          discoveryStatus: "PENDING", discoveryAttempts: 0, nextRetryAt: null,
+          detectedAts: null, detectedIdentifier: null, discoveryConfidence: null,
+          validationStatus: null, discoveryError: null,
+        } : {}),
+      } });
       await audit(tx, "COMPANY_EDITED", "company", id, { enabled: data.enabled });
       return company;
     });
@@ -399,6 +416,10 @@ export class AdminController {
     await this.validateSource(data);
     return this.db.client.$transaction(async (tx) => {
       const source = await tx.source.create({ data });
+      await tx.company.update({ where: { id: data.companyId }, data: {
+        discoveryStatus: "KNOWN", discoverySourceId: source.id,
+        validationStatus: data.enabled ? "EXISTING" : "NOT_TESTED",
+      } });
       await audit(tx, "SOURCE_CREATED", "source", source.id, { enabled: data.enabled });
       return source;
     });
@@ -437,7 +458,7 @@ export class AdminController {
       throw new BadRequestException("Company not found");
     if (!validSourceIdentifier(data))
       throw new BadRequestException(
-        "Invalid identifier for this provider (eu: is Lever only; de: is Personio only)",
+        "Invalid provider identifier (USAJOBS: public; CANADA_JOB_BANK: official-en; ARBEITNOW: all; Lever EU: eu:slug; Personio DE: de:slug)",
       );
     if (
       await this.db.client.source.findFirst({
@@ -473,6 +494,20 @@ export class AdminController {
       await queue.close();
     }
   }
+  @Post("sources/:id/test") async testSource(@Param("id") id: string) {
+    rateLimit("source-test", 20, 60000);
+    const source = await this.db.client.source.findUnique({ where: { id } });
+    if (!source) throw new NotFoundException();
+    if (source.type !== "USAJOBS") throw new BadRequestException("Connection test is available for USAJOBS");
+    const queue = createQueue();
+    try {
+      await queue.add("test", { sourceId: id }, { deduplication: { id: `test:${id}` } });
+      await this.db.client.adminAuditLog.create({ data: { action: "SOURCE_TEST_QUEUED", entityType: "source", entityId: id } });
+      return { queued: true };
+    } finally {
+      await queue.close();
+    }
+  }
   @Get("logs") async logs(@Query() input: unknown) {
     const q = parse(
       z
@@ -497,5 +532,70 @@ export class AdminController {
       }),
     ]);
     return { total, items, page: q.page, pages: Math.ceil(total / 20) };
+  }
+  @Get("discovery") async discovery(@Query() input: unknown) {
+    const q = parse(z.object({
+      page: z.coerce.number().int().min(1).max(10000).default(1),
+      status: z.enum(["PENDING", "SCANNING", "REVIEW", "ENABLED", "KNOWN", "FAILED", "REJECTED", "IGNORED"]).optional(),
+      search: z.string().max(150).default(""),
+    }).strict(), input);
+    const where: Prisma.CompanyWhereInput = {
+      discoveredAt: { not: null },
+      ...(q.status ? { discoveryStatus: q.status } : {}),
+      ...(q.search ? { name: { contains: q.search, mode: "insensitive" } } : {}),
+    };
+    const [total, companies, metrics] = await Promise.all([
+      this.db.client.company.count({ where }),
+      this.db.client.company.findMany({ where, orderBy: [{ discoveredAt: "desc" }, { id: "asc" }],
+        take: 20, skip: (q.page - 1) * 20,
+        include: { _count: { select: { jobs: true, sources: true } } },
+      }),
+      discoveryMetrics(this.db.client),
+    ]);
+    const ids = companies.map((item) => item.discoverySourceId).filter((id): id is string => !!id);
+    const counts = ids.length ? await this.db.client.job.groupBy({ by: ["sourceId"],
+      where: { sourceId: { in: ids } }, _count: { _all: true },
+    }) : [];
+    const bySource = new Map(counts.map((item) => [item.sourceId, item._count._all]));
+    return { metrics, total, page: q.page, pages: Math.ceil(total / 20),
+      items: companies.map((item) => ({ ...item, jobsImported: bySource.get(item.discoverySourceId ?? "") ?? 0 })),
+    };
+  }
+  @Post("discovery/:id/:action") async discoveryAction(
+    @Param("id") id: string, @Param("action") actionInput: string,
+  ) {
+    rateLimit("discovery-action", 30, 60000);
+    const action = parse(z.enum(["approve", "reject", "retry", "create-source", "ignore"]), actionInput);
+    const company = await this.db.client.company.findUnique({ where: { id } });
+    if (!company) throw new NotFoundException();
+    if (action === "create-source") {
+      try {
+        const source = await createSourceForReview(this.db.client, id);
+        await this.db.client.adminAuditLog.create({ data: { action: "DISCOVERY_SOURCE_CREATED", entityType: "company", entityId: id } });
+        return { sourceId: source.id };
+      } catch (error) { throw new BadRequestException(error instanceof Error ? error.message : "Could not create source"); }
+    }
+    if (action === "reject" || action === "ignore") {
+      if (["ENABLED", "KNOWN"].includes(company.discoveryStatus))
+        throw new BadRequestException("Active sources must be managed in Sources");
+      await this.db.client.company.update({ where: { id }, data: {
+        discoveryStatus: action === "reject" ? "REJECTED" : "IGNORED", nextRetryAt: null,
+      } });
+    } else {
+      if (action === "approve" && !["REVIEW", "FAILED", "PENDING"].includes(company.discoveryStatus))
+        throw new BadRequestException("Only pending or review items can be approved");
+      if (action === "retry") await this.db.client.company.update({ where: { id }, data: {
+        discoveryStatus: "PENDING", discoveryAttempts: 0, nextRetryAt: null,
+      } });
+      const queue = createQueue();
+      try { await queue.add("company-discovery", { companyId: id, force: action === "approve" },
+        { deduplication: { id: `discovery:${id}` } }); }
+      finally { await queue.close(); }
+    }
+    await this.db.client.adminAuditLog.create({ data: {
+      action: `DISCOVERY_${action.toUpperCase().replaceAll("-", "_")}`,
+      entityType: "company", entityId: id,
+    } });
+    return { ok: true };
   }
 }

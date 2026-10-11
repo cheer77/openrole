@@ -34,5 +34,41 @@
       "website": "https://www.ashbyhq.com",
       "careerUrl": "https://jobs.ashbyhq.com/Ashby"
     }
+  },
+  {
+    "name": "USAJOBS public federal jobs",
+    "type": "USAJOBS",
+    "sourceIdentifier": "public",
+    "enabled": false,
+    "company": {
+      "name": "USAJOBS",
+      "slug": "usajobs-source",
+      "website": "https://www.usajobs.gov",
+      "careerUrl": "https://www.usajobs.gov"
+    }
+  },
+  {
+    "name": "Arbeitnow European jobs",
+    "type": "ARBEITNOW",
+    "sourceIdentifier": "all",
+    "enabled": false,
+    "company": {
+      "name": "Arbeitnow",
+      "slug": "arbeitnow-source",
+      "website": "https://www.arbeitnow.com",
+      "careerUrl": "https://www.arbeitnow.com"
+    }
+  },
+  {
+    "name": "Canada Job Bank historical dataset",
+    "type": "CANADA_JOB_BANK",
+    "sourceIdentifier": "official-en",
+    "enabled": false,
+    "company": {
+      "name": "Canada Job Bank Open Data",
+      "slug": "canada-job-bank-source",
+      "website": "https://www.jobbank.gc.ca",
+      "careerUrl": "https://open.canada.ca/data/en/dataset/ea639e28-c0fc-48bf-b5dd-b8899bd43072"
+    }
   }
 ]

@@ -4,11 +4,18 @@ import { fetchJson, type FetchJson } from "./http.js";
 import { parseIdentifier } from "./source-config.js";
 import { SmartRecruitersProvider } from "./smartrecruiters.js";
 import { PersonioProvider, RecruiteeProvider } from "./xml-providers.js";
+import { USAJobsProvider } from "./usajobs.js";
+import { ArbeitnowProvider } from "./arbeitnow.js";
+import { CanadaJobBankProvider } from "./canada-job-bank.js";
 export { fetchJson, type FetchJson } from "./http.js";
 export { sourceIdentifierSchema } from "./source-config.js";
+export { USAJobsProvider } from "./usajobs.js";
+export { ArbeitnowProvider } from "./arbeitnow.js";
+export { CanadaJobBankProvider } from "./canada-job-bank.js";
 
 export interface JobProvider {
   fetch(identifier: string): Promise<NormalizedJob[]>;
+  testConnection?(identifier: string): Promise<void>;
 }
 
 const greenhouseSchema = z.object({
@@ -21,6 +28,7 @@ const greenhouseSchema = z.object({
         content: z.string(),
         absolute_url: httpUrl,
         location: z.object({ name: z.string() }),
+        updated_at: z.string().nullish(),
       }),
     )
     .max(20000),
@@ -48,6 +56,7 @@ export class GreenhouseProvider implements JobProvider {
           location: job.location.name,
           sourceUrl: job.absolute_url,
           applyUrl: job.absolute_url,
+          sourceUpdatedAt: job.updated_at,
           // updated_at is not a publication date. Do not use it for freshness.
         }),
       );
@@ -73,6 +82,7 @@ const leverSchema = z
       }),
       workplaceType: z.string().optional(),
       createdAt: z.number().optional(),
+      updatedAt: z.number().nullish(),
       salaryRange: z
         .object({
           min: z.number().nullish(),
@@ -121,6 +131,7 @@ export class LeverProvider implements JobProvider {
             workplace: job.workplaceType,
             employmentType: job.categories.commitment,
             publishedAt: job.createdAt,
+            sourceUpdatedAt: job.updatedAt,
             sourceUrl: job.hostedUrl,
             applyUrl: job.applyUrl,
             salary: job.salaryRange,
@@ -233,5 +244,8 @@ export function getProvider(type: string): JobProvider {
   if (type === "SMARTRECRUITERS") return new SmartRecruitersProvider();
   if (type === "PERSONIO") return new PersonioProvider();
   if (type === "RECRUITEE") return new RecruiteeProvider();
+  if (type === "USAJOBS") return new USAJobsProvider();
+  if (type === "ARBEITNOW") return new ArbeitnowProvider();
+  if (type === "CANADA_JOB_BANK") return new CanadaJobBankProvider();
   throw new Error(`Source type ${type} cannot be synchronized`);
 }

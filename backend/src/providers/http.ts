@@ -1,13 +1,14 @@
 export type FetchJson = (url: string) => Promise<unknown>;
 export type FetchText = (url: string) => Promise<string>;
 
-export const fetchText: FetchText = async (url) => {
+export const fetchTextWithHeaders = async (url: string, headers: Record<string, string> = {}) => {
   const response = await fetch(url, {
     signal: AbortSignal.timeout(20000),
     redirect: "error",
     headers: {
       Accept: "application/json, application/xml, text/xml",
       "User-Agent": "vmiyou/0.2 (job-board-sync)",
+      ...headers,
     },
   });
   if (!response.ok) throw new Error(`Provider HTTP ${response.status}`);
@@ -24,6 +25,8 @@ export const fetchText: FetchText = async (url) => {
   }
   return Buffer.concat(chunks).toString("utf8");
 };
+
+export const fetchText: FetchText = (url) => fetchTextWithHeaders(url);
 
 export const fetchJson: FetchJson = async (url) =>
   JSON.parse(await fetchText(url)) as unknown;

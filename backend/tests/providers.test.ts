@@ -77,6 +77,7 @@ test("Greenhouse checks complete response and does not treat updated_at as publi
     meta: { total: 1 },
   })).fetch("example");
   assert.equal(jobs[0].publishedAt, null);
+  assert.equal(jobs[0].sourceUpdatedAt?.toISOString(), "2026-01-01T00:00:00.000Z");
   assert.equal(jobs[0].remoteType, "REMOTE");
   await assert.rejects(
     new GreenhouseProvider(async () => ({

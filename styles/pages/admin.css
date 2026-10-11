@@ -143,6 +143,22 @@ body:has(.owner-login) {
 	border-top: 3px solid var(--brand);
 	padding-top: 21px;
 }
+.admin-discovery-kpis {
+	grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+}
+.admin-discovery-panel table {
+	min-width: 1040px;
+}
+.admin-discovery-panel td a {
+	display: inline-block;
+	margin-top: 5px;
+	color: var(--brand);
+	font-weight: 600;
+}
+.admin-discovery-error {
+	color: #b42332 !important;
+	overflow-wrap: anywhere;
+}
 .admin-inline-stats {
 	display: flex;
 	flex-wrap: wrap;
