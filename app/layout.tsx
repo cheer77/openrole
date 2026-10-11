@@ -38,6 +38,32 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL(siteOrigin()),
   applicationName: "vmiyou",
+  icons: {
+    shortcut: "/favicon/favicon.ico",
+    icon: [
+      { url: "/favicon/favicon.ico", sizes: "any" },
+      { url: "/favicon/favicon-16x16.png", type: "image/png", sizes: "16x16" },
+      { url: "/favicon/favicon-32x32.png", type: "image/png", sizes: "32x32" },
+      { url: "/favicon/favicon-96x96.png", type: "image/png", sizes: "96x96" },
+      { url: "/favicon/favicon-128.png", type: "image/png", sizes: "128x128" },
+      { url: "/favicon/favicon-196x196.png", type: "image/png", sizes: "196x196" },
+    ],
+    apple: [
+      { url: "/favicon/apple-touch-icon-57x57.png", type: "image/png", sizes: "57x57" },
+      { url: "/favicon/apple-touch-icon-60x60.png", type: "image/png", sizes: "60x60" },
+      { url: "/favicon/apple-touch-icon-72x72.png", type: "image/png", sizes: "72x72" },
+      { url: "/favicon/apple-touch-icon-76x76.png", type: "image/png", sizes: "76x76" },
+      { url: "/favicon/apple-touch-icon-114x114.png", type: "image/png", sizes: "114x114" },
+      { url: "/favicon/apple-touch-icon-120x120.png", type: "image/png", sizes: "120x120" },
+      { url: "/favicon/apple-touch-icon-144x144.png", type: "image/png", sizes: "144x144" },
+      { url: "/favicon/apple-touch-icon-152x152.png", type: "image/png", sizes: "152x152" },
+    ],
+  },
+  other: {
+    "msapplication-config": "/favicon/browserconfig.xml",
+    "msapplication-TileColor": "#ffffff",
+    "msapplication-TileImage": "/favicon/mstile-144x144.png",
+  },
   title: {
     default: "vmiyou — Find your next chapter in tech",
     template: "%s | vmiyou",

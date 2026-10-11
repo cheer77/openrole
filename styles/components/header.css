@@ -12,27 +12,14 @@
 .brand {
 	display: inline-flex;
 	align-items: center;
-	font-size: 27px;
-	font-weight: 750;
-	letter-spacing: -1.3px;
+	width: 150px;
+	min-height: 44px;
 	flex-shrink: 0;
 }
-.brand-symbol {
-	display: grid;
-	place-items: center;
-	width: 34px;
-	height: 34px;
-	background: var(--brand);
-	border-radius: 8px;
-	margin-right: 9px;
-	color: #fff;
-}
-.brand-symbol svg {
-	transform: rotate(-45deg);
-	stroke-width: 2.5;
-}
-.brand-period {
-	color: var(--brand);
+.brand-logo-image {
+	display: block;
+	width: 100%;
+	height: auto;
 }
 .header-inner nav {
 	display: flex;
@@ -133,11 +120,7 @@
 		padding-top: 0;
 	}
 	.brand {
-		font-size: 25px;
-	}
-	.brand-symbol {
-		width: 31px;
-		height: 31px;
+		width: 130px;
 	}
 	.header-actions {
 		display: none;

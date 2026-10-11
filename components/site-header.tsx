@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Icon } from './icon';
+import { BrandLogo } from './brand-logo';
 
 export function SiteHeader() {
 	const pathname = usePathname();
@@ -10,10 +11,7 @@ export function SiteHeader() {
 		<header className='site-header'>
 			<div className='container header-inner'>
 				<Link href='/' className='brand' aria-label='vmiyou home'>
-					<span className='brand-symbol'>
-						<Icon name='arrow' size={23} />
-					</span>
-					vmiyou<span className='brand-period'>.</span>
+					<BrandLogo eager />
 				</Link>
 				<nav aria-label='Main navigation'>
 					<Link
@@ -93,8 +91,8 @@ export function SiteFooter({ version }: { version: string }) {
 	return (
 		<footer className='site-footer'>
 			<div className='container footer-inner'>
-				<Link href='/' className='footer-brand'>
-					vmiyou.
+				<Link href='/' className='brand footer-brand' aria-label='vmiyou home'>
+					<BrandLogo />
 				</Link>
 				<p>Jobs across every industry</p>
 				<nav aria-label='Footer navigation'>

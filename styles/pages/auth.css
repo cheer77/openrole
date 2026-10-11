@@ -248,7 +248,7 @@ body:has(.auth-page) > .site-footer {
     padding-top: 14px;
   }
   .auth-header .brand {
-    font-size: 23px;
+    width: 130px;
   }
   .auth-role-switch {
     grid-row: 2;

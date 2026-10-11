@@ -29,7 +29,7 @@ body:has(.owner-login) {
 	color: var(--text-secondary);
 }
 .admin-sidebar .brand {
-	font-size: 27px;
+	width: 150px;
 }
 .admin-sidebar nav {
 	display: grid;
@@ -970,6 +970,9 @@ body:has(.owner-login) {
 	display: grid;
 	gap: 16px;
 	box-shadow: var(--shadow-card);
+}
+.owner-login-brand {
+	width: 160px;
 }
 .owner-login-card h1 {
 	margin: 5px 0 0;

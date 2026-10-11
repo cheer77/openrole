@@ -3,14 +3,15 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { AdminSearch } from "./search";
+import { BrandLogo } from "@/components/brand-logo";
 export function AdminNav() {
   const pathname = usePathname();
   const router = useRouter();
   const [error, setError] = useState("");
   return (
     <aside className="admin-sidebar">
-      <Link href="/admin" className="brand">
-        vmiyou<span className="brand-period">.</span>
+      <Link href="/admin" className="brand" aria-label="vmiyou admin home">
+        <BrandLogo eager />
       </Link>
       <span className="admin-eyebrow">OWNER WORKSPACE</span>
       <AdminSearch />

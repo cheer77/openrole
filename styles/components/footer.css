@@ -11,10 +11,7 @@
   color: #69768c;
 }
 .footer-brand {
-  color: #24334e;
-  font-size: 23px;
-  font-weight: 700;
-  letter-spacing: -0.8px;
+	width: 124px;
 }
 .footer-inner nav {
   display: flex;
@@ -42,7 +39,7 @@
     padding-block: 22px;
   }
   .footer-brand {
-    font-size: 21px;
+    width: 124px;
   }
   .footer-inner p {
     font-size: 11px;

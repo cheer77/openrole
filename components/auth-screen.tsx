@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/icon";
+import { BrandLogo } from "@/components/brand-logo";
 
 export type AuthRole = "seeker" | "employer";
 export type AuthMode = "login" | "register";
@@ -30,10 +31,7 @@ export function AuthScreen({ mode, role }: { mode: AuthMode; role: AuthRole }) {
     <main id="main-content" className="auth-page">
       <header className="auth-header container">
         <Link href="/" className="brand" aria-label="vmiyou home">
-          <span className="brand-symbol">
-            <Icon name="arrow" size={23} />
-          </span>
-          vmiyou<span className="brand-period">.</span>
+          <BrandLogo eager />
         </Link>
         <nav className="auth-role-switch" aria-label="Account type">
           <Link
