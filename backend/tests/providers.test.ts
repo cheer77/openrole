@@ -33,6 +33,22 @@ test("normalization cleans HTML, classifies role, preserves unknown geography an
   );
 });
 
+test("double-encoded Greenhouse markup becomes readable and a distinct region identifies Germany", () => {
+  const job = normalize({
+    ...raw,
+    description: "&amp;lt;h2&amp;gt;Deine Rolle&amp;lt;/h2&amp;gt;&amp;lt;p&amp;gt;Planung &amp;amp;amp; Steuerung&amp;lt;/p&amp;gt;",
+    location: "Magdeburg, Saxony-Anhalt",
+  });
+  assert.equal(job.description, "DEINE ROLLE\n\nPlanung & Steuerung");
+  assert.equal(job.descriptionHtml, "<h2>Deine Rolle</h2><p>Planung &amp; Steuerung</p>");
+  assert.equal(job.country, "DE");
+  assert.equal(normalize({ ...raw, location: "Springfield" }).country, null);
+  const mixed = normalize({ ...raw, description: "<div>&amp;lt;p&amp;gt;Readable text&amp;lt;/p&amp;gt;</div>" });
+  assert.equal(mixed.description, "Readable text");
+  assert.equal(mixed.descriptionHtml, "<div><p>Readable text</p></div>");
+  assert.equal(normalize({ ...raw, description: "&lt;h2&gt;&lt;/h2&gt;&lt;p&gt;Text&lt;/p&gt;" }).descriptionHtml, "<p>Text</p>");
+});
+
 test("plain provider sections become safe paragraphs while real markup is preserved", () => {
   assert.equal(sourceBodyHtml("Build A & B\n\nWork together"), "<p>Build A &amp; B</p><p>Work together</p>");
   assert.equal(sourceBodyHtml("<ul><li>One</li></ul>"), "<ul><li>One</li></ul>");
@@ -88,6 +104,35 @@ test("Greenhouse checks complete response and does not treat updated_at as publi
   await assert.rejects(
     new GreenhouseProvider(async () => ({ jobs: [] })).fetch("example"),
   );
+});
+
+test("Greenhouse uses a verified employer for the opaque HelloFresh alumni board", async () => {
+  const jobs = await new GreenhouseProvider(async () => ({
+    jobs: [{ id: 8211215, internal_job_id: 1, title: "Senior Production Planner",
+      content: "&amp;lt;p&amp;gt;Plan production&amp;lt;/p&amp;gt;",
+      absolute_url: "https://job-boards.greenhouse.io/4lu44n1n37w012k/jobs/8211215",
+      location: { name: "Magdeburg, Saxony-Anhalt" },
+      offices: [{ location: "Magdeburg, Saxony-Anhalt, Germany" }],
+    }], meta: { total: 1 },
+  })).fetch("4lu44n1n37w012k");
+  assert.equal(jobs[0]?.companyName, "HelloFresh");
+  assert.equal(jobs[0]?.country, "DE");
+  assert.equal(jobs[0]?.description, "Plan production");
+});
+
+test("opaque Greenhouse boards use a readable official board name when available", async () => {
+  const calls: string[] = [];
+  const jobs = await new GreenhouseProvider(async (url) => {
+    calls.push(url);
+    if (url.endsWith("/jobs?content=true")) return {
+      jobs: [{ id: 1, title: "Engineer", content: "Build software",
+        absolute_url: "https://example.com/job", location: { name: "Remote" } }],
+      meta: { total: 1 },
+    };
+    return { name: "Example Industries" };
+  }).fetch("a1b2c3d4e5f6");
+  assert.equal(calls.length, 2);
+  assert.equal(jobs[0]?.companyName, "Example Industries");
 });
 
 test("Lever retrieves all pages and supports EU instances", async () => {

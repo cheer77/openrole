@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { normalize, escapeHtml, sourceBodyHtml, httpUrl, type NormalizedJob } from "./normalize.js";
+import { normalize, escapeHtml, sourceBodyHtml, countryFromLocation, httpUrl, type NormalizedJob } from "./normalize.js";
 import { fetchJson, type FetchJson } from "./http.js";
 import { parseIdentifier } from "./source-config.js";
 import { SmartRecruitersProvider } from "./smartrecruiters.js";
@@ -28,6 +28,7 @@ const greenhouseSchema = z.object({
         content: z.string(),
         absolute_url: httpUrl,
         location: z.object({ name: z.string() }),
+        offices: z.array(z.object({ location: z.string().optional() })).optional(),
         updated_at: z.string().nullish(),
       }),
     )
@@ -46,20 +47,37 @@ export class GreenhouseProvider implements JobProvider {
     );
     if (body.meta.total !== body.jobs.length)
       throw new Error("Incomplete Greenhouse snapshot");
+    // This verified alumni board belongs to HelloFresh, despite its opaque
+    // Greenhouse token and generic board title.
+    const verifiedEmployer = board === "4lu44n1n37w012k" ? "HelloFresh" : null;
+    let boardEmployer: string | null = null;
+    if (!verifiedEmployer && board.length >= 12 && /[a-z]/i.test(board) && /\d/.test(board)) {
+      try {
+        const metadata = z.object({ name: z.string().trim().min(2).max(120) }).parse(
+          await this.get(`https://boards-api.greenhouse.io/v1/boards/${encodeURIComponent(board)}`),
+        );
+        if (!/^(?:careers?|jobs?|job board|open roles|alumni network job board)$/i.test(metadata.name) && metadata.name.toLowerCase() !== board.toLowerCase())
+          boardEmployer = metadata.name;
+      } catch { /* Board metadata is optional; a failed lookup must not block jobs. */ }
+    }
     return body.jobs
       .filter((job) => job.internal_job_id !== null)
-      .map((job) =>
-        normalize({
+      .map((job) => {
+        const officeCountries = new Set((job.offices ?? [])
+          .map((office) => countryFromLocation(office.location)).filter((country): country is string => !!country));
+        return normalize({
           externalId: String(job.id),
           title: job.title,
           description: job.content,
           location: job.location.name,
+          country: officeCountries.size === 1 ? [...officeCountries][0] : undefined,
+          companyName: verifiedEmployer ?? boardEmployer,
           sourceUrl: job.absolute_url,
           applyUrl: job.absolute_url,
           sourceUpdatedAt: job.updated_at,
           // updated_at is not a publication date. Do not use it for freshness.
-        }),
-      );
+        });
+      });
   }
 }
 

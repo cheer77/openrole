@@ -25,6 +25,14 @@ export function timeAgo(date: string, now: number): string {
   const hours = Math.floor(minutes / 60);
   return hours < 24 ? `${hours}h ago` : `${Math.floor(hours / 24)}d ago`;
 }
-export function locationLabel(job: Job): string {
-  return job.location;
+export function locationLabel(job: Pick<Job, "location" | "country">): string {
+  const location = job.location.trim();
+  if (!job.country) return location;
+  const country = /^[A-Z]{2}$/.test(job.country)
+    ? new Intl.DisplayNames(["en"], { type: "region" }).of(job.country) ?? job.country
+    : job.country;
+  const parts = location.split(/[,;|]/).map((part) => part.trim().toLowerCase());
+  if (parts.includes(country.toLowerCase()) || parts.includes(job.country.toLowerCase())) return location;
+  if (!location || location === "Not specified" || location === "Location not specified") return country;
+  return `${location}, ${country}`;
 }

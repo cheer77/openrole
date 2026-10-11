@@ -98,7 +98,7 @@ export default async function JobDetails({ params, searchParams }: Props) {
               <Icon name="globe" size={22} />
               <div>
                 <h2>Is this role open to you?</h2>
-                <p>{job.eligibility}</p>
+                <p>{locationLabel(job)}</p>
                 <small>
                   Confirm work authorization, visa sponsorship and location
                   requirements with the employer.

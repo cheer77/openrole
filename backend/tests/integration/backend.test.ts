@@ -281,9 +281,17 @@ test("PostgreSQL synchronization and API regression", async (t) => {
         } });
         try {
           await syncSource(db, aggregateSource.id, { fetch: async () => [{
+            ...original, externalId: "employer-job", companyName: null,
+          }] });
+          const before = await db.job.findFirstOrThrow({ where: { sourceId: aggregateSource.id } });
+          assert.equal(before.companyId, aggregate.id);
+          await syncSource(db, aggregateSource.id, { fetch: async () => [{
             ...original, externalId: "employer-job", companyName: employerName,
           }] });
           const employer = await db.company.findFirstOrThrow({ where: { name: employerName } });
+          const reassigned = await db.job.findFirstOrThrow({ where: { sourceId: aggregateSource.id } });
+          assert.equal(reassigned.companyId, employer.id);
+          assert.equal(reassigned.slug, before.slug);
           assert.equal(await db.source.count({ where: { companyId: employer.id } }), 0);
           const listed = await (await fetch(`${base}/companies?search=${encodeURIComponent(employerName)}`)).json();
           assert.equal(listed.total, 1);

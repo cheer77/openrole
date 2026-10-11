@@ -78,13 +78,47 @@ export type RawJob = {
 };
 
 export function plainText(value: string) {
-  return convert(decodeHTML(value), {
+  return convert(decodeMarkup(value), {
     wordwrap: false,
     selectors: [
       { selector: "a", options: { ignoreHref: true } },
       { selector: "img", format: "skip" },
     ],
   }).trim();
+}
+
+function decodeMarkup(value: string) {
+  let decoded = value;
+  // Greenhouse and some XML boards encode HTML entities more than once.
+  // Decode only while recognizable tags are still escaped. This also handles
+  // fragments that mix real and escaped markup without rewriting normal HTML.
+  const escapedTag = /&(?:amp;)*lt;\s*\/?\s*(?:h[1-6]|p|div|span|ul|ol|li|strong|b|em|i|br|a|blockquote)\b/i;
+  for (let pass = 0; pass < 3; pass++) {
+    if (!escapedTag.test(decoded)) break;
+    const next = decodeHTML(decoded);
+    if (next === decoded) break;
+    decoded = next;
+  }
+  return decoded;
+}
+
+const locationCountries: Record<string, string> = {
+  germany: "DE", deutschland: "DE", spain: "ES", españa: "ES",
+  france: "FR", italy: "IT", poland: "PL", netherlands: "NL",
+  belgium: "BE", austria: "AT", switzerland: "CH",
+  "united kingdom": "GB", uk: "GB", "united states": "US", usa: "US",
+  canada: "CA", australia: "AU",
+  // Distinct administrative regions provide evidence when the source omits
+  // the country, as in "Magdeburg, Saxony-Anhalt".
+  "saxony-anhalt": "DE", bavaria: "DE", "baden-württemberg": "DE",
+  "north rhine-westphalia": "DE", "lower saxony": "DE",
+  "rhineland-palatinate": "DE", "schleswig-holstein": "DE",
+  "mecklenburg-western pomerania": "DE", thuringia: "DE",
+};
+
+export function countryFromLocation(location: string | undefined) {
+  const finalPart = location?.split(/[,;|]/).at(-1)?.trim().toLocaleLowerCase();
+  return finalPart ? locationCountries[finalPart] ?? null : null;
 }
 
 export function escapeHtml(value: string) {
@@ -134,7 +168,8 @@ const technologies = [
 export function normalize(raw: RawJob): NormalizedJob {
   const title = plainText(raw.title).replace(/\s+/g, " ");
   const description = plainText(raw.description);
-  const markup = raw.descriptionHtml ?? raw.description;
+  const markup = decodeMarkup(raw.descriptionHtml ?? raw.description)
+    .replace(/<h([1-6])\b[^>]*>\s*<\/h\1>/gi, "");
   const descriptionHtml = /<\/?(?:h[1-6]|p|div|span|ul|ol|li|strong|b|em|i|br|a|blockquote)\b/i.test(markup) && markup.length <= 200000
     ? markup
     : null;
@@ -186,7 +221,7 @@ export function normalize(raw: RawJob): NormalizedJob {
     category: categoryRules.find(([rule]) => rule.test(title))?.[1] ?? "Other",
     location: raw.location?.trim() || "Not specified",
     city: raw.city || null,
-    country: raw.country ? (countryMap[raw.country] ?? raw.country) : null,
+    country: raw.country ? (countryMap[raw.country] ?? raw.country) : countryFromLocation(raw.location),
     region: raw.region || null,
     remoteType,
     employmentType: raw.employmentType || null,
