@@ -27,9 +27,13 @@ export class ArbeitnowProvider implements JobProvider {
     const ids = new Set<string>();
     for (let page = 1; page <= 200; page++) {
       const body = schema.parse(await this.get(`https://www.arbeitnow.com/api/job-board-api?page=${page}`));
+      let newItems = 0;
       for (const item of body.data) {
-        if (ids.has(item.slug)) throw new Error("Duplicate Arbeitnow ID across pages");
+        // Offset pagination can overlap when jobs are added or removed while
+        // the snapshot is being fetched. Keep one record per stable slug.
+        if (ids.has(item.slug)) continue;
         ids.add(item.slug);
+        newItems++;
         if (ids.size > maxSnapshotItems) throw new Error("Arbeitnow snapshot safety limit reached");
         jobs.push(normalize({
           externalId: item.slug, title: item.title,
@@ -44,6 +48,8 @@ export class ArbeitnowProvider implements JobProvider {
           sourceUrl: item.url, applyUrl: item.url,
         }));
       }
+      if (page > 1 && body.data.length && newItems === 0)
+        throw new Error("Arbeitnow pagination repeated a page without new jobs");
       if (!body.links.next) return jobs;
       const next = new URL(body.links.next);
       if (next.origin !== "https://www.arbeitnow.com" || next.pathname !== "/api/job-board-api" || next.searchParams.get("page") !== String(page + 1))

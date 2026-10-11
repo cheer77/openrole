@@ -68,6 +68,24 @@ test("Arbeitnow accepts its current page size above 100 without dropping jobs", 
   assert.equal(jobs[324]?.externalId, "job-324");
 });
 
+test("Arbeitnow skips overlapping page IDs but rejects a fully repeated page", async () => {
+  const item = (slug: string) => ({
+    slug, company_name: "Example GmbH", title: "Engineer",
+    description: "Build software", remote: false,
+    url: `https://www.arbeitnow.com/jobs/${slug}`,
+  });
+  const next = "https://www.arbeitnow.com/api/job-board-api?page=2";
+  const jobs = await new ArbeitnowProvider(async (url) => ({
+    data: url.endsWith("page=1") ? [item("one"), item("two")] : [item("two"), item("three")],
+    links: { next: url.endsWith("page=1") ? next : null },
+  })).fetch("all");
+  assert.deepEqual(jobs.map((job) => job.externalId), ["one", "two", "three"]);
+
+  await assert.rejects(new ArbeitnowProvider(async (url) => ({
+    data: [item("one")], links: { next: url.endsWith("page=1") ? next : null },
+  })).fetch("all"), /repeated a page/);
+});
+
 test("Canada CSV handles quoted fields but historical dataset cannot become active listings", async () => {
   async function* chunks() {
     yield Buffer.from('Job Title,City\n"Engineer, Senior","Mon');
