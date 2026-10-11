@@ -38,14 +38,13 @@
 .home-hero h1 {
 	max-width: 820px;
 	margin: 17px 0 15px;
-	color: #fff;
 	font-size: clamp(38px, 5vw, 64px);
 	line-height: 1.08;
 	letter-spacing: -0.055em;
 	font-weight: 760;
+	color: #fff;
 }
 .home-hero h1 em {
-	color: #fff;
 	font-style: normal;
 	text-decoration: underline;
 	text-decoration-color: #ffd2cf;
@@ -55,9 +54,9 @@
 .home-hero-copy > p {
 	max-width: 580px;
 	margin: 0;
-	color: #292038;
 	font-size: 17px;
 	line-height: 1.65;
+	color: #fff;
 }
 .home-hero-facts {
 	display: flex;
