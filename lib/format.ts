@@ -1,4 +1,21 @@
 import type { Job } from "@/features/jobs/types";
+const knownRegions: Record<string, string> = {
+  "saxony-anhalt": "DE",
+  bavaria: "DE",
+  "baden-württemberg": "DE",
+  "north rhine-westphalia": "DE",
+  "lower saxony": "DE",
+  "rhineland-palatinate": "DE",
+  "schleswig-holstein": "DE",
+  "mecklenburg-western pomerania": "DE",
+  thuringia: "DE",
+};
+
+export function countryFromLocation(location: string | null | undefined): string | null {
+  const region = location?.split(/[,;|]/).at(-1)?.trim().toLocaleLowerCase();
+  return region ? knownRegions[region] ?? null : null;
+}
+
 export function formatSalary(salary: Job["salary"]): string {
   if (!salary) return "Salary not listed";
   const format = (amount: number) =>

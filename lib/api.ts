@@ -1,6 +1,8 @@
 import "server-only";
 import { cache } from "react";
 import type { Job } from "@/features/jobs/types";
+import { readableCompanyName } from "@/lib/company-display";
+import { countryFromLocation } from "@/lib/format";
 
 export interface ApiCompany {
   id: string;
@@ -66,6 +68,7 @@ async function request<T>(path: string): Promise<T> {
   return response.json() as Promise<T>;
 }
 export function companyPresentation(company: ApiCompany): Job["company"] {
+  const name = readableCompanyName(company.name);
   let logoUrl = company.logoUrl;
   if (!logoUrl && company.website) {
     try {
@@ -75,10 +78,10 @@ export function companyPresentation(company: ApiCompany): Job["company"] {
     }
   }
   return {
-    name: company.name,
+    name,
     slug: company.slug,
     logoUrl,
-    initials: company.name
+    initials: name
       .split(/\s+/)
       .slice(0, 2)
       .map((word) => word[0])
@@ -100,7 +103,7 @@ function toJob(job: ApiJob): Job {
     category: job.category,
     location: job.location || "Location not specified",
     city: job.city || undefined,
-    country: job.country ?? null,
+    country: job.country || countryFromLocation(job.location),
     region: job.region ?? null,
     remoteType: job.remoteType,
     employmentType: job.employmentType ?? null,
@@ -161,7 +164,8 @@ export interface CompanyDetails extends ApiCompany {
 }
 export const getCompany = cache(async (slug: string): Promise<CompanyDetails | null> => {
   try {
-    return await request<CompanyDetails>(`/companies/${encodeURIComponent(slug)}`);
+    const company = await request<CompanyDetails>(`/companies/${encodeURIComponent(slug)}`);
+    return { ...company, name: readableCompanyName(company.name) };
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) return null;
     throw error;
@@ -185,7 +189,10 @@ export function getSeoCompanies(offset: number, limit: number) {
 export function getCompanies(
   query = new URLSearchParams(),
 ): Promise<PageResult<ApiCompany>> {
-  return request(`/companies?${query}`);
+  return request<PageResult<ApiCompany>>(`/companies?${query}`).then((result) => ({
+    ...result,
+    items: result.items.map((company) => ({ ...company, name: readableCompanyName(company.name) })),
+  }));
 }
 
 export function requestTime(): number {

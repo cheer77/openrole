@@ -1,4 +1,5 @@
 import sanitizeHtml from "sanitize-html";
+import { decodeHTML } from "entities";
 
 type Block =
   | { kind: "heading"; text: string }
@@ -86,7 +87,14 @@ export function parsePlainDescription(source: string): Block[] {
 }
 
 export function sanitizeJobDescription(source: string) {
-  return sanitizeHtml(source, {
+  let markup = source;
+  const escapedTag = /&(?:amp;)*lt;\s*\/?\s*(?:h[1-6]|p|div|span|ul|ol|li|strong|b|em|i|br|a|blockquote)\b/i;
+  for (let pass = 0; pass < 3 && escapedTag.test(markup); pass++) {
+    const decoded = decodeHTML(markup);
+    if (decoded === markup) break;
+    markup = decoded;
+  }
+  return sanitizeHtml(markup, {
     allowedTags: ["h2", "h3", "p", "ul", "ol", "li", "strong", "b", "em", "i", "br", "a", "div", "span", "blockquote"],
     allowedAttributes: { a: ["href", "target", "rel"] },
     allowedSchemes: ["http", "https"],
@@ -107,5 +115,5 @@ export function sanitizeJobDescription(source: string) {
         }
       },
     },
-  });
+  }).replace(/<h[23]>\s*<\/h[23]>/g, "");
 }

@@ -26,7 +26,7 @@ function linkedText(value: string) {
 }
 
 export function JobDescription({ description, descriptionHtml }: { description: string; descriptionHtml?: string | null }) {
-  const cleanHtml = descriptionHtml ? sanitizeJobDescription(descriptionHtml) : "";
+  const cleanHtml = sanitizeJobDescription(descriptionHtml || description);
   const structuredHtml = /<(?:h[23]|p|ul|ol|li|blockquote|br|strong|b|em|i|a)\b/i.test(cleanHtml);
   if (structuredHtml) {
     return (

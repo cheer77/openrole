@@ -11,6 +11,14 @@ test("HTML retains semantic sections, lists and emphasis without unsafe markup",
   assert.doesNotMatch(html, /script|onerror|<img/);
 });
 
+test("legacy escaped Greenhouse markup renders as safe structured HTML", () => {
+  const html = sanitizeJobDescription('&amp;lt;h2&amp;gt;&amp;lt;/h2&amp;gt;&amp;lt;h2&amp;gt;Deine Rolle&amp;lt;/h2&amp;gt;&amp;lt;p&amp;gt;Planung &amp;amp; Analyse&amp;lt;/p&amp;gt;&amp;lt;script&amp;gt;alert(1)&amp;lt;/script&amp;gt;');
+  assert.match(html, /<h2>Deine Rolle<\/h2>/);
+  assert.match(html, /<p>Planung &amp; Analyse<\/p>/);
+  assert.doesNotMatch(html, /<script|&lt;h2|alert\(1\)/);
+  assert.doesNotMatch(html, /<h2><\/h2>/);
+});
+
 test("long plain text becomes readable paragraphs without losing words", () => {
   const source = Array.from({ length: 35 }, (_, i) => `Sentence ${i} explains the work clearly.`).join(" ");
   const blocks = parsePlainDescription(source);
