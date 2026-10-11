@@ -29,11 +29,11 @@ export function AuthScreen({ mode, role }: { mode: AuthMode; role: AuthRole }) {
   return (
     <main id="main-content" className="auth-page">
       <header className="auth-header container">
-        <Link href="/" className="brand" aria-label="Openrole home">
+        <Link href="/" className="brand" aria-label="vmiyou home">
           <span className="brand-symbol">
             <Icon name="arrow" size={23} />
           </span>
-          openrole<span className="brand-period">.</span>
+          vmiyou<span className="brand-period">.</span>
         </Link>
         <nav className="auth-role-switch" aria-label="Account type">
           <Link
@@ -171,7 +171,7 @@ export function AuthScreen({ mode, role }: { mode: AuthMode; role: AuthRole }) {
             )}
           </form>
           <p className="auth-switch">
-            {isRegister ? "Already have an account?" : "New to Openrole?"}{" "}
+            {isRegister ? "Already have an account?" : "New to vmiyou?"}{" "}
             <Link href={otherHref}>
               {isRegister ? "Sign in" : "Create an account"}
             </Link>

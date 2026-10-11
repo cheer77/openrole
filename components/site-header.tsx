@@ -9,11 +9,11 @@ export function SiteHeader() {
   return (
     <header className="site-header">
       <div className="container header-inner">
-        <Link href="/" className="brand" aria-label="Openrole home">
+        <Link href="/" className="brand" aria-label="vmiyou home">
           <span className="brand-symbol">
             <Icon name="arrow" size={23} />
           </span>
-          openrole<span className="brand-period">.</span>
+          vmiyou<span className="brand-period">.</span>
         </Link>
         <nav aria-label="Main navigation">
           <Link
@@ -100,7 +100,7 @@ export function SiteFooter() {
     <footer className="site-footer">
       <div className="container footer-inner">
         <Link href="/" className="footer-brand">
-          openrole.
+          vmiyou.
         </Link>
         <p>Tech careers, everywhere.</p>
         <nav aria-label="Footer navigation">

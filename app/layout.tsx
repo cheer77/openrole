@@ -35,12 +35,17 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteOrigin()),
+  applicationName: "vmiyou",
   title: {
-    default: "Openrole — Find your next chapter in tech",
-    template: "%s | Openrole",
+    default: "vmiyou — Find your next chapter in tech",
+    template: "%s | vmiyou",
   },
   description:
     "Discover tech and digital jobs with clear location requirements. Search remote, hybrid, and on-site opportunities around the world.",
+  openGraph: {
+    type: "website",
+    siteName: "vmiyou",
+  },
   robots: indexRobots(true),
 };
 export default function RootLayout({

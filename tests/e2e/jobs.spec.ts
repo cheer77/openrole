@@ -193,7 +193,7 @@ test("responsive layout fits viewport and captures the product", async ({
   await page.goto("/jobs");
   await expect(page.locator(".job-card").first()).toBeVisible();
   await page.screenshot({
-    path: `test-results/openrole-${testInfo.project.name}.png`,
+    path: `test-results/vmiyou-${testInfo.project.name}.png`,
     fullPage: true,
     scale: "css",
   });
@@ -217,7 +217,7 @@ test("responsive layout fits viewport and captures the product", async ({
     page.getByRole("heading", { name: "Working at Linear" }),
   ).toBeVisible();
   await page.screenshot({
-    path: `test-results/openrole-detail-${testInfo.project.name}.png`,
+    path: `test-results/vmiyou-detail-${testInfo.project.name}.png`,
     fullPage: true,
     scale: "css",
   });

@@ -3,7 +3,7 @@ import { AuthScreen } from "@/components/auth-screen";
 
 export const metadata: Metadata = {
   title: "Create account",
-  description: "Create an Openrole account.",
+  description: "Create a vmiyou account.",
   robots: { index: false, follow: false },
 };
 

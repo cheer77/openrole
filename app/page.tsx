@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 	title: 'Discover your next role',
 	alternates: { canonical: '/' },
 	description:
-		'Explore tech and digital roles, companies, and flexible ways to work on Openrole.',
+		'Explore tech and digital roles, companies, and flexible ways to work on vmiyou.',
 };
 
 const quickSearches = [
@@ -70,7 +70,7 @@ export default async function Home() {
 							<span className="home-hero-orbit">
 								<Icon name="sparkle" size={22} />
 							</span>
-							<span>Openrole / your next chapter</span>
+							<span>vmiyou / your next chapter</span>
 						</div>
 						<p>Good work starts with a clearer search.</p>
 						<div className="home-hero-card-bottom">

@@ -9,7 +9,7 @@ export function AdminNav() {
   return (
     <aside className="admin-sidebar">
       <Link href="/admin" className="brand">
-        openrole<span className="brand-period">.</span>
+        vmiyou<span className="brand-period">.</span>
       </Link>
       <span className="admin-eyebrow">OWNER WORKSPACE</span>
       <nav aria-label="Admin navigation">

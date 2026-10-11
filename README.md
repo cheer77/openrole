@@ -1,4 +1,4 @@
-# Openrole — Phase 5
+# vmiyou — Phase 5
 
 Поиск вакансий на Next.js App Router, React, TypeScript strict и Tailwind CSS. Frontend подключён к NestJS API и PostgreSQL/Prisma; ATS-источники синхронизируются через BullMQ/Redis. Интерфейс на английском языке.
 

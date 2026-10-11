@@ -34,7 +34,7 @@ export function OwnerLogin() {
         }
       }}
     >
-      <span className="admin-eyebrow">OPENROLE / OWNER ACCESS</span>
+      <span className="admin-eyebrow">VMIYOU / OWNER ACCESS</span>
       <h1>Your workspace.</h1>
       <p>Sign in to manage your job board and understand its growth.</p>
       <label htmlFor="owner-password">Owner password</label>
@@ -55,7 +55,7 @@ export function OwnerLogin() {
         {busy ? "Signing in…" : "Sign in"}
       </button>
       <Link className="inline-link" href="/">
-        Back to Openrole
+        Back to vmiyou
       </Link>
     </form>
   );

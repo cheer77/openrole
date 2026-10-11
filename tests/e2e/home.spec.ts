@@ -38,13 +38,13 @@ test("home discovery links use real jobs and company routes", async ({
   await page.locator(".home-company-card").first().click();
   await expect(page).toHaveURL(/\/companies\/[a-z0-9-]+$/);
   await expect(page.locator(".company-profile h1")).toBeVisible();
-  await page.getByRole("link", { name: "Openrole home" }).click();
+  await page.getByRole("link", { name: "vmiyou home" }).click();
   await page
     .getByRole("navigation", { name: "Popular searches" })
     .getByRole("link", { name: "Remote" })
     .click();
   await expect(page).toHaveURL(/workType=Remote/);
-  await page.getByRole("link", { name: "Openrole home" }).click();
+  await page.getByRole("link", { name: "vmiyou home" }).click();
   await expect(page).toHaveURL(/\/$/);
   await page.getByRole("link", { name: "All companies" }).click();
   await expect(page).toHaveURL(/\/companies$/);

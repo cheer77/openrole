@@ -1,4 +1,4 @@
-# Openrole backend — Phase 5
+# vmiyou backend — Phase 5
 
 NestJS 12 (ESM), PostgreSQL 17, Prisma 7, Redis 7, BullMQ. Backend — отдельный npm-пакет. В Phase 3 frontend подключён к API через сервер Next.js (`API_URL`); mock-данные используются только в изолированных тестах. Owner API и privacy-conscious аналитика реализованы в Phase 4. Кабинеты соискателей/работодателей и OAuth остаются за границами фазы.
 

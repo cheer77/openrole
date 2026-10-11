@@ -7,7 +7,7 @@ export const fetchText: FetchText = async (url) => {
     redirect: "error",
     headers: {
       Accept: "application/json, application/xml, text/xml",
-      "User-Agent": "Openrole/0.2 (job-board-sync)",
+      "User-Agent": "vmiyou/0.2 (job-board-sync)",
     },
   });
   if (!response.ok) throw new Error(`Provider HTTP ${response.status}`);
