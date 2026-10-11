@@ -5,12 +5,13 @@ import {
   ownerRequest,
   sameOrigin,
 } from "@/lib/admin/server";
+import { allowedAdminMutationPath, allowedAdminReadPath } from "@/lib/admin/routes";
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ path: string[] }> },
 ) {
   const path = (await params).path.join("/");
-  if (!/^(session|dashboard|jobs|companies|sources|logs|search|alerts|system|integrations|audit-logs)$/.test(path))
+  if (!allowedAdminReadPath(path))
     return new Response(null, { status: 404 });
   try {
     const response = await ownerRequest(path + new URL(request.url).search);
@@ -38,11 +39,7 @@ async function mutate(
       { status: 403 },
     );
   const path = (await params).path.join("/");
-  if (
-    !/^(login|logout|companies|sources|integrations\/(?:ga4|gtm|meta|clarity)|(?:jobs|companies|sources)\/[a-zA-Z0-9_-]+(?:\/(?:status|reset|sync))?)$/.test(
-      path,
-    )
-  )
+  if (!allowedAdminMutationPath(path))
     return new Response(null, { status: 404 });
   try {
     const input =

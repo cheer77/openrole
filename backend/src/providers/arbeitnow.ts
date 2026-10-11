@@ -4,6 +4,10 @@ import { httpUrl, normalize } from "./normalize.js";
 import { parseIdentifier } from "./source-config.js";
 import type { JobProvider } from "./providers.js";
 
+// Arbeitnow currently returns more than 300 jobs on a page. Keep a generous
+// safety bound, while the shared HTTP client caps each response at 20 MB.
+const maxPageItems = 5000;
+const maxSnapshotItems = 50000;
 const schema = z.object({
   data: z.array(z.object({
     slug: z.string().min(1), company_name: z.string().min(1),
@@ -11,7 +15,7 @@ const schema = z.object({
     url: httpUrl, tags: z.array(z.string()).optional(),
     job_types: z.array(z.string()).optional(), location: z.string().optional(),
     created_at: z.number().optional(),
-  })).max(100),
+  })).max(maxPageItems),
   links: z.object({ next: httpUrl.nullable() }),
 });
 
@@ -26,6 +30,7 @@ export class ArbeitnowProvider implements JobProvider {
       for (const item of body.data) {
         if (ids.has(item.slug)) throw new Error("Duplicate Arbeitnow ID across pages");
         ids.add(item.slug);
+        if (ids.size > maxSnapshotItems) throw new Error("Arbeitnow snapshot safety limit reached");
         jobs.push(normalize({
           externalId: item.slug, title: item.title,
           companyName: item.company_name,

@@ -57,6 +57,17 @@ test("Arbeitnow follows verified next links and rejects an incomplete page", asy
   await assert.rejects(new ArbeitnowProvider(async () => ({ data: [], links: { next: "https://www.arbeitnow.com/api/job-board-api?page=2" } })).fetch("all"));
 });
 
+test("Arbeitnow accepts its current page size above 100 without dropping jobs", async () => {
+  const data = Array.from({ length: 325 }, (_, index) => ({
+    slug: `job-${index}`, company_name: `Company ${index}`, title: "Engineer",
+    description: "Build software", remote: false,
+    url: `https://www.arbeitnow.com/jobs/job-${index}`,
+  }));
+  const jobs = await new ArbeitnowProvider(async () => ({ data, links: { next: null } })).fetch("all");
+  assert.equal(jobs.length, 325);
+  assert.equal(jobs[324]?.externalId, "job-324");
+});
+
 test("Canada CSV handles quoted fields but historical dataset cannot become active listings", async () => {
   async function* chunks() {
     yield Buffer.from('Job Title,City\n"Engineer, Senior","Mon');
