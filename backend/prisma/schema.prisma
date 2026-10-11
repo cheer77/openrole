@@ -189,3 +189,48 @@ model AnalyticsEvent {
   @@index([visitorId, occurredAt])
   @@index([sessionId, occurredAt])
 }
+
+// Anonymous, bounded session aggregates; no raw IP, typed text or pointer data.
+model AnalyticsSession {
+  id String @id
+  visitorId String
+  startedAt DateTime @default(now())
+  lastActivityAt DateTime @default(now())
+  activeSeconds Int @default(0)
+  pageSeconds Int @default(0)
+  pages Int @default(0)
+  jobViews Int @default(0)
+  searches Int @default(0)
+  filters Int @default(0)
+  applyClicks Int @default(0)
+  heartbeatCount Int @default(0)
+  distinctPaths Int @default(0)
+  botScore Int @default(50)
+  visitorType String @default("UNCERTAIN")
+  knownBot Boolean @default(false)
+  country String?
+  city String?
+  referrer String?
+  device String?
+  @@index([lastActivityAt, visitorType])
+  @@index([startedAt, visitorType])
+}
+
+model IntegrationSetting {
+  provider String @id
+  identifier String @default("")
+  enabled Boolean @default(false)
+  updatedAt DateTime @updatedAt
+}
+
+model AdminAuditLog {
+  id String @id @default(cuid())
+  actor String @default("owner")
+  action String
+  entityType String
+  entityId String
+  details Json?
+  createdAt DateTime @default(now())
+  @@index([createdAt])
+  @@index([entityType, entityId, createdAt])
+}

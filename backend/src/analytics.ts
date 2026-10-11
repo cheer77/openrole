@@ -1,6 +1,7 @@
 import { trafficChart } from "./chart-analytics.js";
 import { z } from "zod";
 import { Prisma, type PrismaClient } from "./generated/prisma/client.js";
+export const trafficFilterSchema = z.enum(["humans", "all", "bots"]).default("humans");
 export const eventSchema = z
   .object({
     id: z.string().uuid(),
@@ -112,9 +113,13 @@ export async function analyticsReport(
   db: PrismaClient,
   range: string,
   now = new Date(),
+  filter: z.infer<typeof trafficFilterSchema> = "humans",
 ) {
   const { start, end, bucket } = dateRange(range, now);
-  const window = Prisma.sql`"occurredAt" >= ${start} AND "occurredAt" < ${end}`;
+  const visitorWhere = filter === "all" ? Prisma.empty : Prisma.sql`AND EXISTS (SELECT 1 FROM "AnalyticsSession" s WHERE s.id = "AnalyticsEvent"."sessionId" AND s."visitorType" = ${filter === "humans" ? "HUMAN" : "LIKELY_BOT"})`;
+  const jobVisitorWhere = filter === "all" ? Prisma.empty : Prisma.sql`AND EXISTS (SELECT 1 FROM "AnalyticsSession" s WHERE s.id = e."sessionId" AND s."visitorType" = ${filter === "humans" ? "HUMAN" : "LIKELY_BOT"})`;
+  const window = Prisma.sql`"occurredAt" >= ${start} AND "occurredAt" < ${end} ${visitorWhere}`;
+  const sessionWhere = { startedAt: { gte: start, lt: end }, ...(filter === "all" ? {} : { visitorType: filter === "humans" ? "HUMAN" : "LIKELY_BOT" }) };
   const [
     summary,
     series,
@@ -130,6 +135,11 @@ export async function analyticsReport(
     inventory,
     recentVisitors,
     chart,
+    engagement,
+    breakdown,
+    recentSessions,
+    onlineNow,
+    activeLast30Min,
   ] = await Promise.all([
     db.$queryRaw<Metrics[]>(
       Prisma.sql`SELECT ${metrics} FROM "AnalyticsEvent" WHERE ${window}`,
@@ -183,7 +193,7 @@ export async function analyticsReport(
         applyClicks: number;
       }[]
     >(
-      Prisma.sql`SELECT e."jobId" AS id, COALESCE(j.title, x.title, 'Deleted job') AS title, COALESCE(c.name, x."companyName", '—') AS company, COUNT(*) FILTER(WHERE e.type='JOB_VIEW')::int AS "jobViews", COUNT(*) FILTER(WHERE e.type='APPLY_CLICK')::int AS "applyClicks" FROM "AnalyticsEvent" e LEFT JOIN "Job" j ON j.id=e."jobId" LEFT JOIN "ExpiredJob" x ON x.id=e."jobId" LEFT JOIN "Company" c ON c.id=j."companyId" WHERE e."occurredAt" >= ${start} AND e."occurredAt" < ${end} AND e."jobId" IS NOT NULL GROUP BY e."jobId",j.title,x.title,c.name,x."companyName"`,
+      Prisma.sql`SELECT e."jobId" AS id, COALESCE(j.title, x.title, 'Deleted job') AS title, COALESCE(c.name, x."companyName", '—') AS company, COUNT(*) FILTER(WHERE e.type='JOB_VIEW')::int AS "jobViews", COUNT(*) FILTER(WHERE e.type='APPLY_CLICK')::int AS "applyClicks" FROM "AnalyticsEvent" e LEFT JOIN "Job" j ON j.id=e."jobId" LEFT JOIN "ExpiredJob" x ON x.id=e."jobId" LEFT JOIN "Company" c ON c.id=j."companyId" WHERE e."occurredAt" >= ${start} AND e."occurredAt" < ${end} AND e."jobId" IS NOT NULL ${jobVisitorWhere} GROUP BY e."jobId",j.title,x.title,c.name,x."companyName"`,
     ),
     Promise.all([
       db.job.count(),
@@ -199,12 +209,18 @@ export async function analyticsReport(
     Promise.all(
       ["today", "7", "30"].map(async (r) => {
         const result = await db.$queryRaw<{ count: number }[]>(
-          Prisma.sql`SELECT COUNT(DISTINCT "visitorId")::int AS count FROM "AnalyticsEvent" WHERE "occurredAt" >= ${dateRange(r).start}`,
+          Prisma.sql`SELECT COUNT(DISTINCT "visitorId")::int AS count FROM "AnalyticsEvent" WHERE "occurredAt" >= ${dateRange(r).start} ${visitorWhere}`,
         );
         return result[0].count;
       }),
     ),
-    trafficChart(db, range, start, end, bucket, now),
+    trafficChart(db, range, start, end, bucket, now, filter),
+    db.analyticsSession.aggregate({ where: sessionWhere, _avg: { activeSeconds: true, pageSeconds: true, pages: true } }),
+    db.analyticsSession.groupBy({ by: ["visitorType"], where: { startedAt: { gte: start, lt: end } }, _count: { _all: true } }),
+    db.analyticsSession.findMany({ where: sessionWhere, orderBy: { startedAt: "desc" }, take: 20,
+      select: { id: true, country: true, city: true, startedAt: true, activeSeconds: true, pages: true, jobViews: true, searches: true, applyClicks: true, referrer: true, device: true, visitorType: true, botScore: true } }),
+    db.analyticsSession.count({ where: { lastActivityAt: { gte: new Date(now.getTime() - 300000) }, ...(filter === "all" ? {} : { visitorType: filter === "humans" ? "HUMAN" : "LIKELY_BOT" }) } }),
+    db.analyticsSession.count({ where: { lastActivityAt: { gte: new Date(now.getTime() - 1800000) }, ...(filter === "all" ? {} : { visitorType: filter === "humans" ? "HUMAN" : "LIKELY_BOT" }) } }),
   ]);
   const slots: (Metrics & { date: string })[] = [];
   for (
@@ -230,6 +246,15 @@ export async function analyticsReport(
   const ranked = jobs.map(withCtr);
   return {
     chart,
+    trafficFilter: filter,
+    engagement: {
+      onlineNow,
+      activeLast30Min,
+      avgSessionSeconds: Math.round(engagement._avg.activeSeconds || 0),
+      avgPageSeconds: Math.round((engagement._avg.pageSeconds || 0) / Math.max(1, engagement._avg.pages || 0)),
+      breakdown: Object.fromEntries(["HUMAN", "UNCERTAIN", "LIKELY_BOT"].map((kind) => [kind, breakdown.find((row) => row.visitorType === kind)?._count._all || 0])),
+    },
+    recentSessions,
     range,
     start,
     end,
@@ -269,6 +294,7 @@ export async function retainData(db: PrismaClient, now = new Date()) {
   await db.analyticsEvent.deleteMany({
     where: { occurredAt: { lt: new Date(now.getTime() - 90 * 86400000) } },
   });
+  await db.analyticsSession.deleteMany({ where: { lastActivityAt: { lt: new Date(now.getTime() - 90 * 86400000) } } });
   await db.importLog.deleteMany({
     where: { startedAt: { lt: new Date(now.getTime() - 30 * 86400000) } },
   });

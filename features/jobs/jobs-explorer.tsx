@@ -24,6 +24,7 @@ import { type Filters, type Job } from './types';
 import type { PageResult } from '@/lib/api';
 import { pageNumbers } from '@/lib/api-query';
 import { JobSkeleton } from '@/components/job-skeleton';
+import { activity } from '@/lib/analytics-client';
 
 const quickFilters: {
 	label: string;
@@ -133,6 +134,7 @@ export function JobsExplorer({
 	const count = activeFilterCount({ ...filters, location: '', workType: '' });
 	const query = appliedQuery;
 	function update(patch: Partial<Filters>) {
+		if (patch.page === undefined) activity('FILTER');
 		const nextFilters = parseFilters(
 			serializeFilters({ ...filters, ...patch, page: patch.page ?? 1 }),
 		);

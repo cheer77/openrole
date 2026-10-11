@@ -50,8 +50,10 @@ export async function trafficChart(
   end: Date,
   bucket: string,
   now: Date,
+  filter: "humans" | "all" | "bots" = "humans",
 ) {
   const previous = comparisonWindow(start, end, range, now);
+  const visitorWhere = filter === "all" ? Prisma.empty : Prisma.sql`AND EXISTS (SELECT 1 FROM "AnalyticsSession" s WHERE s.id = "AnalyticsEvent"."sessionId" AND s."visitorType" = ${filter === "humans" ? "HUMAN" : "LIKELY_BOT"})`;
   // A single indexed event-window query supplies every series and both summaries.
   // Summaries deduplicate across the whole period, not the sum of daily uniques.
   const rows = await db.$queryRaw<
@@ -60,8 +62,9 @@ export async function trafficChart(
     WITH windowed AS (
       SELECT *, CASE WHEN "occurredAt" >= ${start} THEN 'current' ELSE 'previous' END AS period
       FROM "AnalyticsEvent"
-      WHERE ("occurredAt" >= ${start} AND "occurredAt" < ${end})
-        OR (${previous.available} AND "occurredAt" >= ${previous.start} AND "occurredAt" < ${previous.end})
+      WHERE (("occurredAt" >= ${start} AND "occurredAt" < ${end})
+        OR (${previous.available} AND "occurredAt" >= ${previous.start} AND "occurredAt" < ${previous.end}))
+      ${visitorWhere}
     ), scopes AS (
       SELECT period, NULL::timestamp AS timestamp, "visitorId", type FROM windowed
       UNION ALL

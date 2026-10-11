@@ -255,8 +255,6 @@ body:has(.owner-login) {
 	gap: 8px;
 	overflow-x: auto;
 	padding: 3px 2px 10px;
-	scrollbar-width: thin;
-	scrollbar-color: var(--border) transparent;
 }
 .traffic-chart-selectors button {
 	display: inline-flex;
@@ -495,7 +493,6 @@ body:has(.owner-login) {
 	max-height: min(70vh, 720px);
 	max-width: 100%;
 	position: relative;
-	scrollbar-width: thin;
 }
 .admin-table-scroll thead th {
 	position: sticky;
@@ -692,8 +689,6 @@ body:has(.owner-login) {
 	overscroll-behavior: contain;
 	touch-action: manipulation;
 	user-select: none;
-	scrollbar-width: thin;
-	scrollbar-color: var(--brand) var(--border-strong);
 }
 .world-map-viewport.can-drag {
 	cursor: grab;
@@ -737,8 +732,6 @@ body:has(.owner-login) {
 	overflow-y: auto;
 	overscroll-behavior-y: contain;
 	scrollbar-gutter: stable;
-	scrollbar-width: thin;
-	scrollbar-color: var(--brand) var(--border-strong);
 	overflow-wrap: anywhere;
 	list-style: none;
 	margin: 0;
@@ -792,9 +785,13 @@ body:has(.owner-login) {
 	flex-wrap: wrap;
 	margin-bottom: 20px;
 }
-.admin-toolbar > label {
+.admin-toolbar > .admin-search-field {
 	flex: 1;
 	min-width: 160px;
+}
+.admin-search-field {
+	position: relative;
+	min-width: 0;
 }
 .admin-toolbar input,
 .admin-field input,
@@ -809,6 +806,34 @@ body:has(.owner-login) {
 	font: inherit;
 	font-size: 14px;
 	min-height: 44px;
+}
+.admin-search-field input {
+	padding-right: 48px;
+}
+.admin-search-clear {
+	position: absolute;
+	top: 2px;
+	right: 2px;
+	display: grid;
+	place-items: center;
+	width: 40px;
+	height: 40px;
+	border: 0;
+	border-radius: 7px;
+	background: transparent;
+	color: var(--text-secondary);
+	font: inherit;
+	font-size: 24px;
+	line-height: 1;
+	cursor: pointer;
+}
+.admin-search-clear:hover {
+	background: var(--brand-soft);
+	color: var(--brand);
+}
+.admin-search-clear:focus-visible {
+	outline: 2px solid var(--brand);
+	outline-offset: -2px;
 }
 .admin-toolbar .custom-select {
 	width: 170px;
@@ -1020,7 +1045,6 @@ body:has(.owner-login) {
 	.admin-sidebar nav {
 		display: flex;
 		overflow-x: auto;
-		scrollbar-width: thin;
 		gap: 5px;
 	}
 	.admin-sidebar nav a {
@@ -1090,7 +1114,7 @@ body:has(.owner-login) {
 		flex: 1;
 		min-width: 150px;
 	}
-	.admin-toolbar > label {
+	.admin-toolbar > .admin-search-field {
 		flex-basis: 100%;
 	}
 	.admin-dialog {
@@ -1111,4 +1135,75 @@ body:has(.owner-login) {
 	.admin-sidebar-bottom small {
 		margin-left: 0;
 	}
+}
+
+/* Phase 6 control center: grouped navigation, record details and settings. */
+.admin-sidebar { overflow-y: auto; }
+.admin-nav-group { display: grid; gap: 4px; min-width: 0; }
+.admin-nav-group + .admin-nav-group { margin-top: 16px; }
+.admin-nav-label { padding: 0 14px 5px; color: var(--admin-muted); font-size: 10px; font-weight: 750; letter-spacing: 1.2px; text-transform: uppercase; }
+.admin-nav-placeholder { display: flex; justify-content: space-between; gap: 8px; padding: 9px 14px; color: var(--admin-muted); font-size: 13px; opacity: .75; }
+.admin-nav-placeholder small { font-size: 10px; }
+.admin-search-trigger { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); color: var(--text-secondary); cursor: pointer; }
+.admin-search-trigger:hover, .admin-search-trigger:focus-visible { border-color: var(--brand); color: var(--text); }
+.admin-search-trigger kbd { font: inherit; font-size: 11px; }
+.admin-search-dialog { width: min(100% - 24px, 680px); }
+.admin-search-dialog > .admin-search-field { margin: 12px 0; }
+.admin-search-dialog .admin-search-field input { width: 100%; min-height: 44px; padding: 13px 48px 13px 13px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); color: var(--text); font: inherit; }
+.admin-search-results { display: grid; gap: 14px; max-height: min(60vh, 480px); overflow-y: auto; }
+.admin-search-results section { min-width: 0; }
+.admin-search-results h3 { font-size: 12px; text-transform: capitalize; color: var(--text-secondary); }
+.admin-search-results a { display: flex; flex-direction: column; gap: 3px; padding: 10px; border-radius: 8px; }
+.admin-search-results a:hover, .admin-search-results a:focus-visible { background: var(--brand-soft); }
+.admin-search-results small { color: var(--text-secondary); }
+.admin-heading-filters { display: flex; flex-wrap: wrap; gap: 12px; }
+.admin-control-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.admin-details { margin: 12px 0; }
+.admin-details > div { display: flex; justify-content: space-between; align-items: baseline; gap: 20px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.admin-details dt { color: var(--text-secondary); }
+.admin-details dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
+.admin-version { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; overflow-wrap: anywhere; }
+.admin-integration .admin-field { margin: 15px 0; }
+.admin-integration .admin-field input { width: 100%; }
+.admin-selected-record { margin: 0 0 16px; color: var(--text-secondary); }
+.admin-selected-record a, .admin-panel a { color: var(--brand); }
+.admin-detail-tabs { display: flex; gap: 5px; overflow-x: auto; margin: 14px 0; border-bottom: 1px solid var(--border); }
+.admin-detail-summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 14px 0; }
+.admin-detail-tabs button { padding: 10px 12px; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--text-secondary); cursor: pointer; white-space: nowrap; }
+.admin-detail-tabs button[aria-selected="true"] { color: var(--brand); border-color: var(--brand); }
+.admin-detail-content { min-height: 145px; }
+.admin-detail-content li { margin: 8px 0; }
+
+/* One native, narrow scrollbar for every scrollable owner surface. */
+html:has(.admin-shell),
+html:has(.owner-login),
+.admin-sidebar,
+.admin-sidebar nav,
+.traffic-chart-selectors,
+.admin-table-scroll,
+.world-map-viewport,
+.top-jobs,
+.admin-dialog,
+.admin-search-results,
+.admin-detail-tabs,
+body:has(.admin-shell) .select-menu {
+	scrollbar-width: thin;
+	scrollbar-color: var(--brand) var(--border-strong);
+}
+@media (max-width: 800px) {
+  .admin-sidebar { overflow: visible; }
+  .admin-sidebar nav { align-items: center; }
+  .admin-nav-group { display: flex; align-items: center; gap: 4px; flex: none; }
+  .admin-nav-group + .admin-nav-group { margin: 0; border-left: 1px solid var(--border); padding-left: 9px; }
+  .admin-nav-label { padding: 0 4px; white-space: nowrap; }
+  .admin-future-nav { display: none; }
+  .admin-search-trigger { max-width: 360px; }
+  .admin-control-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 420px) {
+  .admin-heading-filters { width: 100%; }
+  .admin-heading-filters .admin-range { min-width: 0; flex: 1; }
+  .admin-heading-filters .custom-select { min-width: 0; }
+  .admin-details > div { display: block; }
+  .admin-details dd { text-align: left; margin-top: 4px; }
 }

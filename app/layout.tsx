@@ -1,7 +1,9 @@
 import { Analytics } from "@/components/analytics";
+import { PublicIntegrations } from "@/components/public-integrations";
 import type { Metadata, Viewport } from "next";
 import { SiteFooter, SiteHeader } from "@/components/site-header";
 import { robots as indexRobots, siteOrigin } from "@/lib/seo-site";
+import platformPackage from "@/package.json";
 import "@/styles/tailwind.css";
 import "@/styles/variables/tokens.css";
 import "@/styles/base/reset.css";
@@ -58,9 +60,10 @@ export default function RootLayout({
           Skip to content
         </a>
         <Analytics />
+        <PublicIntegrations />
         <SiteHeader />
         {children}
-        <SiteFooter />
+        <SiteFooter version={platformPackage.version} />
       </body>
     </html>
   );

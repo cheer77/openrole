@@ -8,6 +8,7 @@ export function OwnerLogin() {
   const [busy, setBusy] = useState(false);
   return (
     <form
+      method="post"
       className="owner-login-card"
       onSubmit={async (e) => {
         e.preventDefault();

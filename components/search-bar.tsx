@@ -3,6 +3,7 @@
 import type { FormEventHandler, Ref } from 'react';
 import { Icon } from '@/components/icon';
 import { Select } from '@/components/select';
+import { activity } from '@/lib/analytics-client';
 import { locations, workTypes } from '@/features/jobs/types';
 
 type SearchValues = { q: string; location: string; workType: string };
@@ -24,7 +25,7 @@ export function SearchBar({ action, inputType = 'text', initialValues, formRef, 
 			method='get'
 			role='search'
 			aria-label='Search jobs'
-			onSubmit={onSubmit}>
+			onSubmit={(event) => { activity('SEARCH'); onSubmit?.(event); }}>
 			<label className='search-input'>
 				<Icon name='search' size={22} />
 				<span className='sr-only'>Job title, company, or keyword</span>

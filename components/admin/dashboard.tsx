@@ -5,8 +5,11 @@ import { useAdminData } from "@/features/admin/use-admin-data";
 import type { Report, TopJob, ChartMetric } from "@/features/admin/types";
 import { WorldMap, countryName } from "./charts";
 import { TrendChart } from "./trend-chart";
+import { OwnerAlerts } from "./owner-alerts";
+import Link from "next/link";
 const n = (v: number) => v.toLocaleString("en-US");
-export function Dashboard() {
+const duration = (seconds: number) => seconds < 60 ? `${seconds}s` : `${Math.floor(seconds / 60)}m ${String(seconds % 60).padStart(2, "0")}s`;
+export function Dashboard({ mode = "overview" }: { mode?: "overview" | "analytics" }) {
   const [chartMetrics, setChartMetrics] = useState<ChartMetric[]>([
     "visitors",
     "jobViews",
@@ -14,9 +17,10 @@ export function Dashboard() {
   ]);
   const [chartTableOpen, setChartTableOpen] = useState(false);
   const [range, setRange] = useState("7");
+  const [traffic, setTraffic] = useState("humans");
   const [revision, setRevision] = useState(0);
   const { data, error, loading } = useAdminData<Report>(
-    "dashboard?range=" + range,
+    `dashboard?range=${range}&traffic=${traffic}`,
     revision,
     30000,
   );
@@ -32,11 +36,11 @@ export function Dashboard() {
     <>
       <div className="admin-page-heading">
         <div>
-          <span className="admin-eyebrow">THE BIG PICTURE</span>
-          <h1>Overview</h1>
+          <span className="admin-eyebrow">{mode === "overview" ? "THE BIG PICTURE" : "AUDIENCE INSIGHTS"}</span>
+          <h1>{mode === "overview" ? "Overview" : "Analytics"}</h1>
           <p>Updates every 30 seconds while this tab is visible.</p>
         </div>
-        <label className="admin-range">
+        <div className="admin-heading-filters"><label className="admin-range">
           <span>Date range</span>
           <Select
             value={range}
@@ -55,7 +59,9 @@ export function Dashboard() {
               </option>
             ))}
           </Select>
-        </label>
+        </label><label className="admin-range"><span>Traffic</span><Select value={traffic} onChange={setTraffic} aria-label="Traffic filter">
+          <option value="humans">Humans</option><option value="all">All traffic</option><option value="bots">Bots</option>
+        </Select></label></div>
       </div>
       {loading && (
         <div
@@ -90,7 +96,7 @@ export function Dashboard() {
       )}
       {data && (
         <>
-          <section className="admin-kpis" aria-label="Selected period metrics">
+          {mode === "overview" && <section className="admin-kpis" aria-label="Selected period metrics">
             {(["visitors", "jobViews", "applyClicks", "ctr"] as const).map(
               (key) => (
                 <div className="admin-kpi" key={key}>
@@ -111,8 +117,8 @@ export function Dashboard() {
                 </div>
               ),
             )}
-          </section>
-          <div className="admin-inline-stats">
+          </section>}
+          {mode === "overview" && <div className="admin-inline-stats">
             <span>
               Page views <strong>{n(data.summary.pageViews)}</strong>
             </span>
@@ -128,15 +134,32 @@ export function Dashboard() {
             <span>
               Last 30 days <strong>{n(data.visitorsMonth)}</strong>
             </span>
-          </div>
-          <TrendChart
+          </div>}
+          <section className="admin-kpis admin-engagement-kpis" aria-label="Audience engagement">
+            {[
+              ["Online now", n(data.engagement.onlineNow), "Activity in the last 5 minutes"],
+              ["Avg session duration", duration(data.engagement.avgSessionSeconds), "Visible-tab time"],
+              ["Avg engaged page time", duration(data.engagement.avgPageSeconds), "Visible-tab time per page"],
+              ["Human traffic", `${Math.round(100 * data.engagement.breakdown.HUMAN / Math.max(1, Object.values(data.engagement.breakdown).reduce((a, b) => a + b, 0)))}%`, "Heuristic classification"],
+              ["Likely bots", `${Math.round(100 * data.engagement.breakdown.LIKELY_BOT / Math.max(1, Object.values(data.engagement.breakdown).reduce((a, b) => a + b, 0)))}%`, "Heuristic classification"],
+              ["Uncertain traffic", `${Math.round(100 * data.engagement.breakdown.UNCERTAIN / Math.max(1, Object.values(data.engagement.breakdown).reduce((a, b) => a + b, 0)))}%`, "Limited activity evidence"],
+            ].map(([label, value, note]) => <div className="admin-kpi" key={label}><span>{label}</span><strong>{value}</strong><small>{note}</small></div>)}
+          </section>
+          {mode === "overview" && <OwnerAlerts />}
+          {mode === "overview" && <p className="admin-overview-link"><Link href="/admin/analytics">Explore detailed analytics →</Link></p>}
+          {mode === "analytics" && <><TrendChart
             data={data.chart}
             enabled={chartMetrics}
             onEnabledChange={setChartMetrics}
             tableOpen={chartTableOpen}
             onTableOpenChange={setChartTableOpen}
           />
-          <section className="admin-inventory" aria-label="Job board inventory">
+          <div className="admin-inline-stats"><span>Active last 30 min <strong>{n(data.engagement.activeLast30Min)}</strong></span><span>Sessions <strong>{n(data.summary.sessions)}</strong></span><span>Page views <strong>{n(data.summary.pageViews)}</strong></span></div>
+          <section className="admin-panel"><h2>Human / bot / uncertain</h2><div className="admin-breakdown-row">
+            {(["HUMAN", "UNCERTAIN", "LIKELY_BOT"] as const).map((kind) => <span key={kind}>{kind.replace("_", " ").toLowerCase()} <strong>{n(data.engagement.breakdown[kind])}</strong></span>)}
+          </div><p>Classification is estimated from anonymous activity; it does not block visits.</p></section>
+          </>}
+          {mode === "overview" && <section className="admin-inventory" aria-label="Job board inventory">
             {Object.entries({
               totalJobs: "Total jobs",
               activeJobs: "Active jobs",
@@ -151,8 +174,8 @@ export function Dashboard() {
                 <span>{label}</span>
               </div>
             ))}
-          </section>
-          <div className="admin-dashboard-grid">
+          </section>}
+          {mode === "analytics" && <><div className="admin-dashboard-grid">
             <WorldMap
               countries={data.countries}
               total={data.summary.visitors}
@@ -323,12 +346,15 @@ export function Dashboard() {
               )}
             </section>
           </div>
+          <section className="admin-panel admin-recent-sessions"><h2>Recent sessions</h2><p>Latest 20 anonymous sessions in the selected period.</p><div className="admin-table-scroll"><table><thead><tr><th>Country / city</th><th>Started (UTC)</th><th>Duration</th><th>Pages</th><th>Job views</th><th>Searches</th><th>Apply clicks</th><th>Referrer</th><th>Device</th><th>Visitor type</th><th>Bot score</th></tr></thead><tbody>
+            {data.recentSessions.map((session) => <tr key={session.id}><td>{countryName(session.country)}<small>{session.city || "—"}</small></td><td>{new Date(session.startedAt).toLocaleString("en-GB", { timeZone: "UTC" })}</td><td>{duration(session.activeSeconds)}</td><td>{session.pages}</td><td>{session.jobViews}</td><td>{session.searches}</td><td>{session.applyClicks}</td><td>{session.referrer || "Direct"}</td><td>{session.device || "—"}</td><td>{session.visitorType.replace("_", " ")}</td><td>{session.botScore}</td></tr>)}
+          </tbody></table></div>{!data.recentSessions.length && <p className="admin-muted">No sessions in this period.</p>}</section>
           <p className="admin-footnote">
             All dates use UTC. Anonymous visitor estimates can appear in
             multiple countries or sources, so rows are not additive. Raw events
             are retained for 90 days. Inventory includes enabled and disabled
             companies and sources.
-          </p>
+          </p></>}
         </>
       )}
     </>

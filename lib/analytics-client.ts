@@ -38,7 +38,7 @@ export function track(
 ) {
   if (
     trackingDisabled() ||
-    !/^\/(?:jobs(?:\/[a-zA-Z0-9_-]+)?|companies|privacy)?$/.test(path)
+    !trackedPath(path)
   )
     return;
   try {
@@ -95,5 +95,25 @@ export function track(
       }).catch(() => {});
   } catch {
     /* Storage restrictions and analytics failures never affect navigation. */
+  }
+}
+
+export function trackedPath(path: string) {
+  return /^\/(?:jobs(?:\/[a-zA-Z0-9_-]+)?|companies(?:\/[a-zA-Z0-9_-]+)?|(?:categories|technologies|locations)\/[a-zA-Z0-9_-]+|remote-jobs|privacy)?$/.test(path);
+}
+
+export function activity(kind: "HEARTBEAT" | "SEARCH" | "FILTER", seconds = 0) {
+  if (trackingDisabled() || document.visibilityState !== "visible") return;
+  try {
+    const session = JSON.parse(sessionStorage.getItem("openrole-session") || "null") as Session | null;
+    const visitor = JSON.parse(localStorage.getItem("openrole-visitor") || "null") as { id: string } | null;
+    if (!session || !visitor || Date.now() - session.last > 1800000) return;
+    session.last = Date.now();
+    sessionStorage.setItem("openrole-session", JSON.stringify(session));
+    const body = JSON.stringify({ sessionId: session.id, visitorId: visitor.id, kind, seconds: Math.max(0, Math.min(60, Math.floor(seconds))) });
+    if (!navigator.sendBeacon("/api/activity", new Blob([body], { type: "application/json" })))
+      void fetch("/api/activity", { method: "POST", headers: { "content-type": "application/json" }, body, keepalive: true }).catch(() => {});
+  } catch {
+    // Analytics must not affect public interactions.
   }
 }

@@ -4,6 +4,9 @@ import { Select } from "@/components/select";
 import { adminMutation, useAdminData } from "@/features/admin/use-admin-data";
 import type { AdminItem, Collection, Resource } from "@/features/admin/types";
 import { categories } from "@/features/jobs/types";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { AdminSearchField } from "./search-field";
 const date = (value?: string | null) =>
   value
     ? new Date(value).toLocaleString("en-GB", { timeZone: "UTC" })
@@ -14,22 +17,33 @@ const names = {
   sources: "Sources",
   logs: "Import logs",
 };
-export function ResourceList({ resource }: { resource: Resource }) {
+export function ResourceList({ resource, initialEntity, initialStatus }: { resource: Resource; initialEntity?: string; initialStatus?: string }) {
+  const router = useRouter();
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("");
+  const [draftSearch, setDraftSearch] = useState("");
+  const [status, setStatus] = useState(["ACTIVE", "CLOSED", "HIDDEN"].includes(initialStatus || "") ? initialStatus! : "");
   const [page, setPage] = useState(1);
   const [revision, setRevision] = useState(0);
   const [editing, setEditing] = useState<AdminItem | null>(null);
+  const [viewing, setViewing] = useState<AdminItem | null>(null);
   const [deleting, setDeleting] = useState<AdminItem | null>(null);
   const [message, setMessage] = useState("");
   const [failure, setFailure] = useState("");
   const [busy, setBusy] = useState(false);
   const params = new URLSearchParams({ search, page: String(page) });
   if (status) params.set("status", status);
+  if (initialEntity) params.set("entity", initialEntity);
   const { data, error, loading } = useAdminData<Collection>(
     `${resource}?${params}`,
     revision,
   );
+  const openedEntity = useRef("");
+  useEffect(() => {
+    if (initialEntity && data?.items[0]?.id === initialEntity && openedEntity.current !== initialEntity) {
+      openedEntity.current = initialEntity;
+      setViewing(data.items[0]);
+    }
+  }, [data, initialEntity]);
   async function change(
     path: string,
     method: string,
@@ -81,20 +95,28 @@ export function ResourceList({ resource }: { resource: Resource }) {
         onSubmit={(e) => {
           e.preventDefault();
           setPage(1);
-          setSearch(
-            String(new FormData(e.currentTarget).get("search") || "").trim(),
-          );
+          setSearch(draftSearch.trim());
         }}
       >
-        <label>
-          <span className="sr-only">Search {resource}</span>
-          <input
-            name="search"
-            placeholder={`Search ${resource}…`}
-            maxLength={150}
-          />
-        </label>
-        <button className="primary-button">Search</button>
+        <AdminSearchField
+          id={`admin-${resource}-search`}
+          name="search"
+          ariaLabel={`Search ${resource}`}
+          clearLabel="Clear search and filters"
+          value={draftSearch}
+          onChange={setDraftSearch}
+          placeholder={`Search ${resource}…`}
+          maxLength={150}
+          showClear={Boolean(draftSearch || search)}
+          onClear={() => {
+            setDraftSearch("");
+            setSearch("");
+            setStatus("");
+            setPage(1);
+            if (initialStatus || initialEntity) router.replace("/admin/" + resource);
+          }}
+        />
+        <button className="primary-button" type="submit">Search</button>
         {resource === "jobs" && (
           <Select
             aria-label="Job status"
@@ -118,6 +140,7 @@ export function ResourceList({ resource }: { resource: Resource }) {
           Refresh
         </button>
       </form>
+      {initialEntity && <p className="admin-selected-record">Showing a selected record. <Link href={"/admin/" + resource}>View all {resource}</Link></p>}
       {message && (
         <p className="admin-notice" role="status">
           {message}
@@ -206,6 +229,7 @@ export function ResourceList({ resource }: { resource: Resource }) {
                             <td>{item.source?.name}</td>
                             <td>
                               <div className="admin-row-actions">
+                                <button onClick={() => setViewing(item)}>View</button>
                                 <button
                                   disabled={busy}
                                   onClick={() => setEditing(item)}
@@ -294,6 +318,7 @@ export function ResourceList({ resource }: { resource: Resource }) {
                             </td>
                             <td>
                               <div className="admin-row-actions">
+                                <button onClick={() => setViewing(item)}>View</button>
                                 <button
                                   disabled={busy}
                                   onClick={() => setEditing(item)}
@@ -346,6 +371,7 @@ export function ResourceList({ resource }: { resource: Resource }) {
                             <td>{item._count?.jobs}</td>
                             <td>
                               <div className="admin-row-actions">
+                                <button onClick={() => setViewing(item)}>View</button>
                                 <button
                                   disabled={busy || item.type === "MANUAL"}
                                   onClick={() => setEditing(item)}
@@ -462,6 +488,7 @@ export function ResourceList({ resource }: { resource: Resource }) {
           }}
         />
       )}
+      {viewing && <EntityDetail resource={resource} item={viewing} onClose={() => setViewing(null)} onEdit={() => { setViewing(null); setEditing(viewing); }} />}
       {deleting && (
         <Modal title="Delete this job?" onClose={() => setDeleting(null)}>
           <p>
@@ -502,6 +529,25 @@ export function ResourceList({ resource }: { resource: Resource }) {
       )}
     </>
   );
+}
+function EntityDetail({ resource, item, onClose, onEdit }: { resource: Resource; item: AdminItem; onClose: () => void; onEdit: () => void }) {
+  const [tab, setTab] = useState("Overview");
+  const params = new URLSearchParams({ page: "1", entityType: resource === "companies" ? "company" : resource === "sources" ? "source" : "job", entityId: item.id });
+  const { data, loading, error } = useAdminData<{ items: { id: string; action: string; createdAt: string }[] }>("audit-logs?" + params);
+  const fields: [string, string | number | undefined | null][] = resource === "jobs"
+    ? [["Company", item.company?.name], ["Source", item.source?.name], ["Status", item.status], ["Location", item.location], ["Category", item.category], ["First seen", item.firstSeenAt ? date(item.firstSeenAt) + " UTC" : null]]
+    : resource === "companies"
+      ? [["Status", item.enabled ? "Enabled" : "Disabled"], ["Country", item.country], ["Website", item.website], ["Jobs", item._count?.jobs], ["Sources", item._count?.sources]]
+      : [["Company", item.company?.name], ["Status", item.enabled ? "Enabled" : "Disabled"], ["Provider", item.type], ["Identifier", item.sourceIdentifier], ["Last sync", item.lastSyncAt], ["Last successful sync", item.lastSuccessfulSync], ["Last error", item.lastError]];
+  return <Modal title={item.title || item.name || "Record"} onClose={onClose}>
+    <div className="admin-detail-summary"><span className={"admin-status status-" + ((item.status || (item.enabled ? "ACTIVE" : "CLOSED")).toLowerCase())}>{item.status || (item.enabled ? "Enabled" : "Disabled")}</span><button className="primary-button" onClick={onEdit} disabled={resource === "sources" && item.type === "MANUAL"}>Edit record</button></div>
+    <div className="admin-detail-tabs" role="tablist" aria-label="Record details">{["Overview", "Activity", "Related", "System"].map((name) => <button key={name} role="tab" aria-selected={tab === name} onClick={() => setTab(name)}>{name}</button>)}</div>
+    {tab === "Overview" && <dl className="admin-details">{fields.map(([name, value]) => <div key={name}><dt>{name}</dt><dd>{value ?? "—"}</dd></div>)}</dl>}
+    {tab === "Activity" && <div className="admin-detail-content">{loading ? <p>Loading activity…</p> : error ? <p role="alert">{error}</p> : data?.items.length ? <ul>{data.items.map((entry) => <li key={entry.id}>{entry.action.replaceAll("_", " ")} · {date(entry.createdAt)} UTC</li>)}</ul> : <p>No owner activity recorded for this record yet.</p>}</div>}
+    {tab === "Related" && <div className="admin-detail-content">{resource === "jobs" ? <><p>Related company and source records:</p><p>{item.company?.name || "—"} · {item.source?.name || "—"}</p></> : resource === "companies" ? <p>{item._count?.jobs || 0} jobs · {item._count?.sources || 0} sources</p> : <p>{item._count?.jobs || 0} imported jobs</p>}</div>}
+    {tab === "System" && <dl className="admin-details"><div><dt>Record ID</dt><dd className="admin-version">{item.id}</dd></div>{item.slug && <div><dt>Slug</dt><dd>{item.slug}</dd></div>}</dl>}
+    <div className="admin-form-actions"><button className="admin-button" onClick={onClose}>Close</button></div>
+  </Modal>;
 }
 function companyBody(item: AdminItem, enabled: boolean) {
   return {
@@ -552,7 +598,7 @@ function Modal({
         <h2 id="admin-dialog-title">{title}</h2>
         <button
           className="icon-button"
-          aria-label="Close editor"
+          aria-label="Close dialog"
           onClick={onClose}
         >
           ×
@@ -832,15 +878,16 @@ function CompanyField() {
   const options = data?.items || [];
   return (
     <div className="admin-field">
-      <label>
-        Find a company
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          maxLength={150}
-          placeholder="Search by company name"
-        />
-      </label>
+      <label htmlFor="admin-company-picker-search">Find a company</label>
+      <AdminSearchField
+        id="admin-company-picker-search"
+        ariaLabel="Find a company"
+        value={search}
+        onChange={setSearch}
+        onClear={() => setSearch("")}
+        maxLength={150}
+        placeholder="Search by company name"
+      />
       <Select
         aria-label="Company"
         value={selected}

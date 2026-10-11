@@ -13,6 +13,7 @@ export function PrivacyControls() {
             localStorage.removeItem("openrole-visitor");
             sessionStorage.removeItem("openrole-session");
             setMessage("Analytics is disabled for this browser.");
+            window.location.reload();
           } catch {
             setMessage(
               "Browser storage is unavailable. Analytics is already disabled.",

@@ -2,6 +2,10 @@
 
 Поиск вакансий на Next.js App Router, React, TypeScript strict и Tailwind CSS. Frontend подключён к NestJS API и PostgreSQL/Prisma; ATS-источники синхронизируются через BullMQ/Redis. Интерфейс на английском языке.
 
+## Версия платформы
+
+Текущий выпуск — **0.3.0**. Это единая SemVer-версия фронтенда и API, а не номер рабочей фазы. Новая совместимая функциональность повышает MINOR, исправления без новых возможностей — PATCH; несовместимые изменения стабильного контракта после 1.0 повышают MAJOR. До 1.0 несовместимые изменения предварительного контракта повышают MINOR. Для каждого завершённого изменения, предназначенного к публикации, обновляйте `package.json`, `package-lock.json`, `backend/package.json` и `backend/package-lock.json` вместе; `npm run check:version` проверяет их совпадение и запускается перед frontend build. Версия видна в футере сайта и в Admin → System → Release.
+
 ## Запуск
 
 Node.js 22.13+. Настройка источников и API описана в [backend/README.md](backend/README.md).

@@ -24,6 +24,7 @@ import { Database } from "./db.js";
 import { jobsQuery } from "./jobs-query.js";
 import { config } from "./config.js";
 import { SeoController } from "./seo.js";
+import { ControlCenterController, PublicIntegrationsController } from "./control-center.js";
 
 @Controller()
 class ApiController {
@@ -233,6 +234,8 @@ class ApiController {
     AdminController,
     OwnerAuthController,
     EventsController,
+    ControlCenterController,
+    PublicIntegrationsController,
   ],
   providers: [Database, OwnerGuard],
 })

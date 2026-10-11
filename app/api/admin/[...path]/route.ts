@@ -10,7 +10,7 @@ export async function GET(
   { params }: { params: Promise<{ path: string[] }> },
 ) {
   const path = (await params).path.join("/");
-  if (!/^(session|dashboard|jobs|companies|sources|logs)$/.test(path))
+  if (!/^(session|dashboard|jobs|companies|sources|logs|search|alerts|system|integrations|audit-logs)$/.test(path))
     return new Response(null, { status: 404 });
   try {
     const response = await ownerRequest(path + new URL(request.url).search);
@@ -39,7 +39,7 @@ async function mutate(
     );
   const path = (await params).path.join("/");
   if (
-    !/^(login|logout|companies|sources|(?:jobs|companies|sources)\/[a-zA-Z0-9_-]+(?:\/(?:status|reset|sync))?)$/.test(
+    !/^(login|logout|companies|sources|integrations\/(?:ga4|gtm|meta|clarity)|(?:jobs|companies|sources)\/[a-zA-Z0-9_-]+(?:\/(?:status|reset|sync))?)$/.test(
       path,
     )
   )

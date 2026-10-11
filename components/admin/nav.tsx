@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
+import { AdminSearch } from "./search";
 export function AdminNav() {
   const pathname = usePathname();
   const router = useRouter();
@@ -12,22 +13,20 @@ export function AdminNav() {
         vmiyou<span className="brand-period">.</span>
       </Link>
       <span className="admin-eyebrow">OWNER WORKSPACE</span>
+      <AdminSearch />
       <nav aria-label="Admin navigation">
         {[
-          ["Overview", "/admin"],
-          ["Jobs", "/admin/jobs"],
-          ["Companies", "/admin/companies"],
-          ["Sources", "/admin/sources"],
-          ["Import logs", "/admin/logs"],
-        ].map(([name, href]) => (
-          <Link
-            key={href}
-            href={href}
-            aria-current={pathname === href ? "page" : undefined}
-          >
-            {name}
-          </Link>
-        ))}
+          { label: "Workspace", links: [["Overview", "/admin"], ["Analytics", "/admin/analytics"]] },
+          { label: "Management", links: [["Jobs", "/admin/jobs"], ["Companies", "/admin/companies"], ["Sources", "/admin/sources"], ["Import logs", "/admin/logs"]] },
+          { label: "Platform", links: [["Integrations", "/admin/integrations"], ["System", "/admin/system"], ["Audit log", "/admin/audit-logs"]] },
+        ].map((group) => <div className="admin-nav-group" key={group.label}>
+          <span className="admin-nav-label">{group.label}</span>
+          {group.links.map(([name, href]) => <Link key={href} href={href} aria-current={pathname === href ? "page" : undefined}>{name}</Link>)}
+          {group.label === "Platform" && <span className="admin-nav-placeholder">Settings<small>Later</small></span>}
+        </div>)}
+        <div className="admin-nav-group admin-future-nav"><span className="admin-nav-label">Future-ready</span>
+          {["Users", "Candidates", "Employers", "Applications"].map((label) => <span className="admin-nav-placeholder" key={label}>{label}<small>Later</small></span>)}
+        </div>
       </nav>
       <div className="admin-sidebar-bottom">
         <Link href="/">View public site ↗</Link>

@@ -28,8 +28,10 @@ import {
   analyticsReport,
   deviceInfo,
   eventSchema,
+  trafficFilterSchema,
   trafficSource,
 } from "./analytics.js";
+import { recordActivity, recordSessionEvent } from "./session-analytics.js";
 import { httpUrl } from "./providers/normalize.js";
 import {
   sourceIdentifierSchema,
@@ -45,6 +47,9 @@ function parse<T>(schema: z.ZodType<T>, input: unknown): T {
       parsed.error.issues.map((e) => e.message).join("; "),
     );
   return parsed.data;
+}
+async function audit(tx: Prisma.TransactionClient, action: string, entityType: string, entityId: string, details?: Record<string, string | boolean>) {
+  await tx.adminAuditLog.create({ data: { action, entityType, entityId, details } });
 }
 const nullableUrl = httpUrl.nullable();
 const companySchema = z
@@ -123,7 +128,6 @@ export class EventsController {
     rateLimit("events-global", 2000, 60000);
     const data = parse(eventSchema, input);
     rateLimit(`events:${data.sessionId}`, 90, 60000);
-    if (/bot|crawler|spider|headless/i.test(data.userAgent || "")) return;
     if (data.type !== "PAGE_VIEW") {
       const job = data.jobId
         ? await this.db.client.job.findFirst({
@@ -143,17 +147,28 @@ export class EventsController {
       referrer && /^[a-z0-9.-]+$/i.test(referrer)
         ? referrer.toLowerCase()
         : undefined;
-    await this.db.client.analyticsEvent.createMany({
+    const device = deviceInfo(userAgent);
+    const created = await this.db.client.analyticsEvent.createMany({
       data: [
         {
           ...event,
           referrer: host,
-          ...deviceInfo(userAgent),
+          ...device,
           trafficSource: trafficSource(data.utmSource, host),
         },
       ],
       skipDuplicates: true,
     });
+    if (created.count) await recordSessionEvent(this.db.client, { ...data, device: device.device, referrer: host });
+  }
+  @Post("activity")
+  @HttpCode(204)
+  async activity(@Headers("x-internal-key") key: string, @Body() input: unknown) {
+    internalAccess(key);
+    rateLimit("activity-global", 3000, 60000);
+    const data = parse(z.object({ sessionId: z.string().uuid(), visitorId: z.string().uuid(), kind: z.enum(["HEARTBEAT", "SEARCH", "FILTER"]), seconds: z.number().int().min(0).max(60).optional() }).strict(), input);
+    rateLimit(`activity:${data.sessionId}`, 30, 60000);
+    await recordActivity(this.db.client, data);
   }
 }
 @Controller("admin")
@@ -169,18 +184,19 @@ export class AdminController {
     });
     return { ok: true };
   }
-  @Get("dashboard") dashboard(@Query("range") input: string) {
+  @Get("dashboard") dashboard(@Query("range") input: string, @Query("traffic") traffic: string) {
     const range = parse(
       z.enum(["today", "yesterday", "7", "30", "90"]).default("7"),
       input,
     );
-    return analyticsReport(this.db.client, range);
+    return analyticsReport(this.db.client, range, new Date(), parse(trafficFilterSchema, traffic));
   }
   @Get("jobs") async jobs(@Query() input: unknown) {
     const q = parse(
       z
         .object({
           search: z.string().max(150).default(""),
+          entity: z.string().max(100).optional(),
           status: z.enum(["ACTIVE", "CLOSED", "HIDDEN"]).optional(),
           page: z.coerce.number().int().min(1).max(10000).default(1),
         })
@@ -188,6 +204,7 @@ export class AdminController {
       input,
     );
     const where: Prisma.JobWhereInput = {
+      ...(q.entity ? { id: q.entity } : {}),
       ...(q.status ? { status: q.status } : {}),
       ...(q.search
         ? {
@@ -217,9 +234,11 @@ export class AdminController {
     @Body() input: unknown,
   ) {
     const data = parse(jobSchema, input);
-    return this.withJob(id, (tx) =>
-      tx.job.update({ where: { id }, data: { ...data, descriptionHtml: null, manualOverride: true } }),
-    );
+    return this.withJob(id, async (tx) => {
+      const job = await tx.job.update({ where: { id }, data: { ...data, descriptionHtml: null, manualOverride: true } });
+      await audit(tx, "JOB_EDITED", "job", id);
+      return job;
+    });
   }
   @Patch("jobs/:id/status") async status(
     @Param("id") id: string,
@@ -229,8 +248,8 @@ export class AdminController {
       z.object({ status: z.enum(["ACTIVE", "CLOSED", "HIDDEN"]) }).strict(),
       input,
     );
-    return this.withJob(id, (tx) =>
-      tx.job.update({
+    return this.withJob(id, async (tx) => {
+      const job = await tx.job.update({
         where: { id },
         data: {
           ...data,
@@ -238,16 +257,20 @@ export class AdminController {
           closedAt: data.status === "CLOSED" ? new Date() : null,
           ...(data.status === "ACTIVE" ? { missingCount: 0, missingSince: null } : {}),
         },
-      }),
-    );
+      });
+      await audit(tx, "JOB_STATUS_CHANGED", "job", id, { status: data.status });
+      return job;
+    });
   }
   @Post("jobs/:id/reset") async reset(@Param("id") id: string) {
-    return this.withJob(id, (tx) =>
-      tx.job.update({
+    return this.withJob(id, async (tx) => {
+      const job = await tx.job.update({
         where: { id },
         data: { manualOverride: false, statusOverride: false },
-      }),
-    );
+      });
+      await audit(tx, "JOB_OVERRIDES_RESET", "job", id);
+      return job;
+    });
   }
   @Delete("jobs/:id") async deleteJob(@Param("id") id: string) {
     return this.withJob(id, async (tx, job) => {
@@ -262,6 +285,7 @@ export class AdminController {
         update: {},
       });
       await tx.job.delete({ where: { id } });
+      await audit(tx, "JOB_DELETED", "job", id);
       return { ok: true };
     });
   }
@@ -293,11 +317,13 @@ export class AdminController {
         .object({
           page: z.coerce.number().int().min(1).max(10000).default(1),
           search: z.string().max(150).default(""),
+          entity: z.string().max(100).optional(),
         })
         .strict(),
       input,
     );
     const where = {
+      ...(q.entity ? { id: q.entity } : {}),
       name: { contains: q.search, mode: "insensitive" as const },
     };
     const [total, items] = await this.db.client.$transaction([
@@ -316,7 +342,11 @@ export class AdminController {
     const data = parse(companySchema, input);
     if (await this.db.client.company.findUnique({ where: { slug: data.slug } }))
       throw new ConflictException("Company slug already exists");
-    return this.db.client.company.create({ data });
+    return this.db.client.$transaction(async (tx) => {
+      const company = await tx.company.create({ data });
+      await audit(tx, "COMPANY_CREATED", "company", company.id);
+      return company;
+    });
   }
   @Patch("companies/:id") async editCompany(
     @Param("id") id: string,
@@ -331,7 +361,11 @@ export class AdminController {
       })
     )
       throw new ConflictException("Company slug already exists");
-    return this.db.client.company.update({ where: { id }, data });
+    return this.db.client.$transaction(async (tx) => {
+      const company = await tx.company.update({ where: { id }, data });
+      await audit(tx, "COMPANY_EDITED", "company", id, { enabled: data.enabled });
+      return company;
+    });
   }
   @Get("sources") async sources(@Query() input: unknown) {
     const q = parse(
@@ -339,11 +373,13 @@ export class AdminController {
         .object({
           page: z.coerce.number().int().min(1).max(10000).default(1),
           search: z.string().max(150).default(""),
+          entity: z.string().max(100).optional(),
         })
         .strict(),
       input,
     );
     const where = {
+      ...(q.entity ? { id: q.entity } : {}),
       name: { contains: q.search, mode: "insensitive" as const },
     };
     const [total, items] = await this.db.client.$transaction([
@@ -361,7 +397,11 @@ export class AdminController {
   @Post("sources") async addSource(@Body() input: unknown) {
     const data = parse(sourceSchema, input);
     await this.validateSource(data);
-    return this.db.client.source.create({ data });
+    return this.db.client.$transaction(async (tx) => {
+      const source = await tx.source.create({ data });
+      await audit(tx, "SOURCE_CREATED", "source", source.id, { enabled: data.enabled });
+      return source;
+    });
   }
   @Patch("sources/:id") async editSource(
     @Param("id") id: string,
@@ -379,7 +419,11 @@ export class AdminController {
         "Create a new source to change its board or company; existing jobs keep their provenance",
       );
     await this.validateSource(data, id);
-    return this.db.client.source.update({ where: { id }, data });
+    return this.db.client.$transaction(async (tx) => {
+      const source = await tx.source.update({ where: { id }, data });
+      await audit(tx, old.enabled === data.enabled ? "SOURCE_EDITED" : "SOURCE_STATUS_CHANGED", "source", id, { enabled: data.enabled });
+      return source;
+    });
   }
   private async validateSource(
     data: z.infer<typeof sourceSchema>,
@@ -423,6 +467,7 @@ export class AdminController {
     const queue = createQueue();
     try {
       await enqueueSources(queue, this.db.client, id);
+      await this.db.client.adminAuditLog.create({ data: { action: "SOURCE_SYNC_QUEUED", entityType: "source", entityId: id } });
       return { queued: true };
     } finally {
       await queue.close();

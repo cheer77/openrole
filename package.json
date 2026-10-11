@@ -1,8 +1,10 @@
 {
   "name": "vmiyou",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "private": true,
   "scripts": {
+    "prebuild": "npm run check:version",
+    "check:version": "node scripts/check-platform-version.mjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",

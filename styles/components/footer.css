@@ -30,6 +30,11 @@
   color: #69768c;
   font-size: 11px;
 }
+.footer-version {
+	color: var(--text-secondary);
+	font-size: 11px;
+	white-space: nowrap;
+}
 @media (max-width: 640px) {
   .footer-inner {
     flex-wrap: wrap;
@@ -45,4 +50,7 @@
   .footer-inner nav {
     display: none;
   }
+	.footer-version {
+		margin-left: auto;
+	}
 }

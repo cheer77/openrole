@@ -41,6 +41,29 @@ export interface TopJob {
   ctr: number;
 }
 export interface Report {
+  trafficFilter: "humans" | "all" | "bots";
+  engagement: {
+    onlineNow: number;
+    activeLast30Min: number;
+    avgSessionSeconds: number;
+    avgPageSeconds: number;
+    breakdown: Record<"HUMAN" | "UNCERTAIN" | "LIKELY_BOT", number>;
+  };
+  recentSessions: {
+    id: string;
+    country: string | null;
+    city: string | null;
+    startedAt: string;
+    activeSeconds: number;
+    pages: number;
+    jobViews: number;
+    searches: number;
+    applyClicks: number;
+    referrer: string | null;
+    device: string | null;
+    visitorType: string;
+    botScore: number;
+  }[];
   chart: TrafficChartData;
   range: string;
   start: string;
@@ -105,6 +128,7 @@ export interface AdminItem {
   lastSuccessfulSync?: string | null;
   lastError?: string | null;
   startedAt?: string;
+  firstSeenAt?: string;
   finishedAt?: string | null;
   jobsFound?: number;
   jobsCreated?: number;
