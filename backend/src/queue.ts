@@ -38,7 +38,7 @@ export async function enqueueSources(
       type: { not: "MANUAL" },
       ...(sourceId ? { id: sourceId } : {}),
     },
-    select: { id: true },
+    select: { id: true, type: true },
   });
   if (sourceId && sources.length === 0)
     throw new Error("Enabled import source not found");
@@ -46,7 +46,14 @@ export async function enqueueSources(
     await queue.add(
       "source",
       { sourceId: source.id },
-      { deduplication: { id: source.id } },
+      {
+        deduplication: { id: source.id },
+        // A 429 from Arbeitnow should not trigger another full pagination
+        // one minute later. Other providers retain the default queue delay.
+        ...(source.type === "ARBEITNOW" ? {
+          backoff: { type: "exponential" as const, delay: 300000 },
+        } : {}),
+      },
     );
   }
   return sources.length;

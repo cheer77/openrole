@@ -6,6 +6,7 @@ import { redisConnection } from "./config.js";
 import { syncSource } from "./sync.js";
 import { cleanupClosedJobs } from "./cleanup.js";
 import { getProvider } from "./providers/providers.js";
+import { isTransientProviderError } from "./providers/http.js";
 import { bootstrapDiscovery, discoverCompany } from "./discovery/index.js";
 
 async function main() {
@@ -79,7 +80,9 @@ async function main() {
         return result;
       } catch (error) {
         const source = await db.source.findUnique({ where: { id: sourceId }, select: { companyId: true } });
-        if (source) {
+        // Rate limits and temporary provider outages must not disable a
+        // source before BullMQ can retry it after the cooldown.
+        if (source && !isTransientProviderError(error)) {
           const company = await db.company.findUnique({ where: { id: source.companyId },
             select: { validationStatus: true, discoverySourceId: true } });
           if (company?.discoverySourceId === sourceId &&

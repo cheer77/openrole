@@ -4,6 +4,7 @@ import { USAJobsProvider } from "../src/providers/usajobs.js";
 import { ArbeitnowProvider } from "../src/providers/arbeitnow.js";
 import { CanadaJobBankProvider, csvRows } from "../src/providers/canada-job-bank.js";
 import { validSourceIdentifier } from "../src/providers/source-config.js";
+import { isTransientProviderError } from "../src/providers/http.js";
 
 test("USAJOBS paginates official results and preserves federal employer and annual pay", async () => {
   const previous = [process.env.USAJOBS_API_KEY, process.env.USAJOBS_USER_AGENT];
@@ -42,15 +43,17 @@ test("USAJOBS paginates official results and preserves federal employer and annu
   }
 });
 
-test("Arbeitnow follows verified next links and rejects an incomplete page", async () => {
+test("Arbeitnow follows verified next links, paces pages and rejects an incomplete page", async () => {
   const item = (id: string) => ({ slug: id, company_name: "Example GmbH", title: "Backend Engineer",
     description: "Build APIs with TypeScript", remote: true, url: `https://www.arbeitnow.com/view/${id}`,
     tags: ["TypeScript"], job_types: ["full_time"], location: "Berlin", created_at: 1780272000 });
+  let pauses = 0;
   const jobs = await new ArbeitnowProvider(async (url) => ({
     data: [item(new URL(url).searchParams.get("page")!)],
     links: { next: url.endsWith("page=1") ? "https://www.arbeitnow.com/api/job-board-api?page=2" : null },
-  })).fetch("all");
+  }), async () => { pauses++; }).fetch("all");
   assert.equal(jobs.length, 2);
+  assert.equal(pauses, 1);
   assert.equal(jobs[0]?.companyName, "Example GmbH");
   assert.equal(jobs[0]?.remoteType, "REMOTE");
   assert.deepEqual(jobs[0]?.technologies, ["TypeScript"]);
@@ -78,12 +81,12 @@ test("Arbeitnow skips overlapping page IDs but rejects a fully repeated page", a
   const jobs = await new ArbeitnowProvider(async (url) => ({
     data: url.endsWith("page=1") ? [item("one"), item("two")] : [item("two"), item("three")],
     links: { next: url.endsWith("page=1") ? next : null },
-  })).fetch("all");
+  }), async () => {}).fetch("all");
   assert.deepEqual(jobs.map((job) => job.externalId), ["one", "two", "three"]);
 
   await assert.rejects(new ArbeitnowProvider(async (url) => ({
     data: [item("one")], links: { next: url.endsWith("page=1") ? next : null },
-  })).fetch("all"), /repeated a page/);
+  }), async () => {}).fetch("all"), /repeated a page/);
 });
 
 test("Canada CSV handles quoted fields but historical dataset cannot become active listings", async () => {
@@ -110,4 +113,11 @@ test("fixed aggregate identifiers reject arbitrary URLs and prefixes", () => {
     assert.equal(validSourceIdentifier({ type, sourceIdentifier: id }), true);
   for (const type of ["USAJOBS", "CANADA_JOB_BANK", "ARBEITNOW"])
     assert.equal(validSourceIdentifier({ type, sourceIdentifier: "https://example.com" }), false);
+});
+
+test("rate limits and provider outages remain retryable without disabling the source", () => {
+  assert.equal(isTransientProviderError(new Error("Provider HTTP 429")), true);
+  assert.equal(isTransientProviderError(new Error("Provider HTTP 503")), true);
+  assert.equal(isTransientProviderError(new Error("Provider HTTP 404")), false);
+  assert.equal(isTransientProviderError(new Error("Invalid identifier for this provider")), false);
 });

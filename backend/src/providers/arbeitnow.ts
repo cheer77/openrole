@@ -1,3 +1,4 @@
+import { setTimeout as delay } from "node:timers/promises";
 import { z } from "zod";
 import { fetchJson, type FetchJson } from "./http.js";
 import { httpUrl, normalize } from "./normalize.js";
@@ -20,12 +21,18 @@ const schema = z.object({
 });
 
 export class ArbeitnowProvider implements JobProvider {
-  constructor(private readonly get: FetchJson = fetchJson) {}
+  constructor(
+    private readonly get: FetchJson = fetchJson,
+    private readonly pause: () => Promise<unknown> = () => delay(5000),
+  ) {}
   async fetch(identifier: string) {
     parseIdentifier("ARBEITNOW", identifier);
     const jobs = [];
     const ids = new Set<string>();
     for (let page = 1; page <= 200; page++) {
+      // The public endpoint is rate limited. Pace requests after the first
+      // page; BullMQ retries a 429 after a longer source-specific cooldown.
+      if (page > 1) await this.pause();
       const body = schema.parse(await this.get(`https://www.arbeitnow.com/api/job-board-api?page=${page}`));
       let newItems = 0;
       for (const item of body.data) {
