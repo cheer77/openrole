@@ -65,6 +65,27 @@ export function ResourceList({ resource, initialEntity, initialStatus }: { resou
       setBusy(false);
     }
   }
+  async function syncSourceItem(item: AdminItem) {
+    setBusy(true);
+    setFailure("");
+    setMessage("");
+    let enabledNow = item.enabled;
+    try {
+      if (!enabledNow) {
+        await adminMutation(`sources/${item.id}`, "PATCH", sourceBody(item, true));
+        enabledNow = true;
+      }
+      await adminMutation(`sources/${item.id}/sync`, "POST");
+      setMessage("Sync queued. Refresh import logs to see its outcome.");
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : "Request failed";
+      setFailure(enabledNow && !item.enabled
+        ? `Source enabled, but sync was not queued: ${reason}` : reason);
+    } finally {
+      setRevision((value) => value + 1);
+      setBusy(false);
+    }
+  }
   return (
     <>
       <div className="admin-page-heading">
@@ -394,20 +415,12 @@ export function ResourceList({ resource, initialEntity, initialStatus }: { resou
                                 <button
                                   disabled={
                                     busy ||
-                                    !item.enabled ||
                                     !item.company?.enabled ||
                                     item.type === "MANUAL"
                                   }
-                                  onClick={() =>
-                                    void change(
-                                      `sources/${item.id}/sync`,
-                                      "POST",
-                                      {},
-                                      "Sync queued. Refresh import logs to see its outcome.",
-                                    )
-                                  }
+                                  onClick={() => void syncSourceItem(item)}
                                 >
-                                  Sync now
+                                  {!item.company?.enabled ? "Enable company first" : item.enabled ? "Sync now" : "Enable & sync"}
                                 </button>
                                 {item.type === "USAJOBS" && (
                                   <button disabled={busy} onClick={() => void change(

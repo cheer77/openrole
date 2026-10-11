@@ -71,7 +71,8 @@ async function main() {
       try {
         const result = await syncSource(db, sourceId);
         if ("found" in result) {
-          await db.company.updateMany({ where: { sources: { some: { id: sourceId } }, validationStatus: "CATALOG" },
+          await db.company.updateMany({ where: { discoverySourceId: sourceId,
+            validationStatus: { in: ["CATALOG", "FAILED"] } },
             data: { discoveryStatus: "ENABLED", validationStatus: "VALID", discoveryError: null } });
           await enqueueCompanyDiscovery(queue, db, sourceId);
         }
@@ -79,8 +80,10 @@ async function main() {
       } catch (error) {
         const source = await db.source.findUnique({ where: { id: sourceId }, select: { companyId: true } });
         if (source) {
-          const company = await db.company.findUnique({ where: { id: source.companyId }, select: { validationStatus: true } });
-          if (company?.validationStatus === "CATALOG") {
+          const company = await db.company.findUnique({ where: { id: source.companyId },
+            select: { validationStatus: true, discoverySourceId: true } });
+          if (company?.discoverySourceId === sourceId &&
+              ["CATALOG", "FAILED"].includes(company.validationStatus ?? "")) {
             const reason = error instanceof Error ? error.message.slice(0, 1000) : "Catalog source validation failed";
             await db.source.update({ where: { id: sourceId }, data: { enabled: false } });
             await db.company.update({ where: { id: source.companyId }, data: {
