@@ -80,6 +80,35 @@ test("quick filters combine and history restores them", async ({ page }) => {
   await expect(page.locator(".job-card")).toHaveCount(3);
 });
 
+test("quick categories scroll by dragging the bar on desktop and mobile", async ({ page }) => {
+  await page.goto("/jobs");
+  const list = page.getByRole("group", { name: "Quick categories" });
+  const bar = page.getByRole("scrollbar", { name: "Scroll quick categories" });
+  await expect(bar).toBeVisible();
+  await expect(page.locator(".quick-scroll-button")).toHaveCount(0);
+  expect(await list.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true);
+  const box = await bar.boundingBox();
+  expect(box).not.toBeNull();
+  await page.mouse.click(box!.x + box!.width * 0.8, box!.y + box!.height / 2);
+  await expect.poll(() => list.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+  await bar.focus();
+  await page.keyboard.press("Home");
+  await expect.poll(() => list.evaluate((element) => element.scrollLeft)).toBe(0);
+  await page.mouse.move(box!.x + 8, box!.y + box!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box!.x + box!.width * 0.7, box!.y + box!.height / 2, { steps: 5 });
+  await page.mouse.up();
+  await expect.poll(() => list.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+  await bar.focus();
+  await page.keyboard.press("Home");
+  await expect.poll(() => list.evaluate((element) => element.scrollLeft)).toBe(0);
+  await page.mouse.move(box!.x + 8, box!.y + box!.height / 2);
+  await page.mouse.down({ button: "right" });
+  await page.mouse.move(box!.x + box!.width * 0.65, box!.y + box!.height / 2, { steps: 5 });
+  await page.mouse.up({ button: "right" });
+  await expect.poll(() => list.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+});
+
 test("pagination, detail content, return state, external Apply", async ({
   page,
   context,

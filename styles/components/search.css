@@ -100,29 +100,52 @@
 	background: var(--surface);
 	border-bottom: 1px solid var(--border);
 }
+.quick-categories {
+	min-width: 0;
+}
 .quick-filters {
 	display: flex;
 	align-items: center;
 	gap: 8px;
 	padding-block: 10px;
+	min-width: 0;
 	overflow-x: auto;
 	scrollbar-width: none;
+	overscroll-behavior-x: contain;
+	-webkit-overflow-scrolling: touch;
 }
 .quick-filters::-webkit-scrollbar {
 	display: none;
 }
 .quick-scroll-track {
-	height: 5px;
-	margin-bottom: 10px;
-	overflow: hidden;
+	position: relative;
+	height: 24px;
+	margin-bottom: 3px;
+	cursor: pointer;
+	touch-action: none;
+	user-select: none;
+}
+.quick-scroll-track[hidden] {
+	display: none;
+}
+.quick-scroll-track::before {
+	content: '';
+	position: absolute;
+	inset: 9px 0;
 	border-radius: 999px;
-	background: var(--border);
+	background: var(--border-strong);
 }
 .quick-scroll-thumb {
-	display: block;
-	height: 100%;
-	border-radius: inherit;
+	position: absolute;
+	top: 8px;
+	height: 8px;
+	border-radius: 999px;
 	background: var(--brand);
+	pointer-events: none;
+}
+.quick-scroll-track:focus-visible {
+	outline: 2px solid var(--focus-ring);
+	outline-offset: -2px;
 }
 .quick-chip {
 	display: inline-flex;
@@ -232,7 +255,6 @@
 	.quick-filters {
 		padding-block: 10px;
 		gap: 7px;
-		scrollbar-width: none;
 	}
 	.quick-chip {
 		padding: 8px 12px;

@@ -75,32 +75,42 @@ export function JobsExplorer({
 	);
 	const quickCategories = useRef<HTMLDivElement>(null);
 	const quickScrollTrack = useRef<HTMLDivElement>(null);
-	const quickScrollThumb = useRef<HTMLSpanElement>(null);
+	const quickDrag = useRef<{ pointerId: number; offset: number } | null>(null);
+	const [quickScroll, setQuickScroll] = useState({ overflow: false, fraction: 1, progress: 0 });
 	useEffect(() => {
 		const list = quickCategories.current;
-		const track = quickScrollTrack.current;
-		const thumb = quickScrollThumb.current;
-		if (!list || !track || !thumb) return;
-		function syncScrollIndicator() {
-			if (!list || !track || !thumb) return;
-			const overflow = list.scrollWidth - list.clientWidth;
-			track.hidden = overflow <= 1;
-			const fraction = list.clientWidth / list.scrollWidth;
-			thumb.style.width = `${fraction * 100}%`;
-			const progress =
-				overflow > 0 ? Math.max(0, Math.min(1, list.scrollLeft / overflow)) : 0;
-			thumb.style.transform = `translateX(${((progress * (1 - fraction)) / fraction) * 100}%)`;
+		if (!list) return;
+		function syncScroll() {
+			if (!list) return;
+			const remaining = list.scrollWidth - list.clientWidth;
+			const next = {
+				overflow: remaining > 1,
+				fraction: Math.min(1, list.clientWidth / list.scrollWidth),
+				progress: remaining > 1 ? list.scrollLeft / remaining : 0,
+			};
+			setQuickScroll((current) => current.overflow === next.overflow && current.fraction === next.fraction && current.progress === next.progress ? current : next);
 		}
-		const observer = new ResizeObserver(syncScrollIndicator);
+		const observer = new ResizeObserver(syncScroll);
 		observer.observe(list);
 		for (const child of list.children) observer.observe(child);
-		list.addEventListener('scroll', syncScrollIndicator, { passive: true });
-		syncScrollIndicator();
+		list.addEventListener('scroll', syncScroll, { passive: true });
+		syncScroll();
 		return () => {
 			observer.disconnect();
-			list.removeEventListener('scroll', syncScrollIndicator);
+			list.removeEventListener('scroll', syncScroll);
 		};
 	}, []);
+	function moveQuickScroll(clientX: number, offset: number) {
+		const list = quickCategories.current;
+		const track = quickScrollTrack.current;
+		if (!list || !track) return;
+		const rect = track.getBoundingClientRect();
+		const remaining = list.scrollWidth - list.clientWidth;
+		const travel = rect.width * (1 - list.clientWidth / list.scrollWidth);
+		if (remaining <= 0 || travel <= 0) return;
+		const position = Math.max(0, Math.min(travel, clientX - rect.left - offset));
+		list.scrollLeft = (position / travel) * remaining;
+	}
 	const dialog = useRef<HTMLDialogElement>(null);
 	const filterTrigger = useRef<HTMLButtonElement>(null);
 	const searchForm = useRef<HTMLFormElement>(null);
@@ -248,6 +258,7 @@ export function JobsExplorer({
 				<div className="container quick-categories">
 					<div
 						ref={quickCategories}
+						id="quick-categories-list"
 						className="quick-filters"
 						role="group"
 						aria-label="Quick categories"
@@ -277,10 +288,50 @@ export function JobsExplorer({
 					<div
 						ref={quickScrollTrack}
 						className="quick-scroll-track"
-						aria-hidden="true"
-						hidden
+						role="scrollbar"
+						aria-label="Scroll quick categories"
+						aria-controls="quick-categories-list"
+						aria-orientation="horizontal"
+						aria-valuemin={0}
+						aria-valuemax={100}
+						aria-valuenow={Math.round(quickScroll.progress * 100)}
+						tabIndex={quickScroll.overflow ? 0 : -1}
+						hidden={!quickScroll.overflow}
+						onPointerDown={(event) => {
+							if (event.pointerType === 'mouse' && event.button !== 0 && event.button !== 2) return;
+							if (event.button === 2) event.preventDefault();
+							const track = quickScrollTrack.current;
+							if (!track) return;
+							const rect = track.getBoundingClientRect();
+							const thumbWidth = rect.width * quickScroll.fraction;
+							const thumbLeft = rect.width * (1 - quickScroll.fraction) * quickScroll.progress;
+							const pointerX = event.clientX - rect.left;
+							const offset = pointerX >= thumbLeft && pointerX <= thumbLeft + thumbWidth ? pointerX - thumbLeft : thumbWidth / 2;
+							quickDrag.current = { pointerId: event.pointerId, offset };
+							track.setPointerCapture(event.pointerId);
+							moveQuickScroll(event.clientX, offset);
+						}}
+						onPointerMove={(event) => {
+							if (quickDrag.current?.pointerId === event.pointerId) moveQuickScroll(event.clientX, quickDrag.current.offset);
+						}}
+						onPointerUp={(event) => {
+							if (quickDrag.current?.pointerId === event.pointerId) quickDrag.current = null;
+						}}
+						onPointerCancel={() => { quickDrag.current = null; }}
+						onContextMenu={(event) => event.preventDefault()}
+						onKeyDown={(event) => {
+							const list = quickCategories.current;
+							if (!list) return;
+							if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
+								event.preventDefault();
+								list.scrollBy({ left: (event.key === 'ArrowRight' ? 1 : -1) * Math.max(80, list.clientWidth / 3), behavior: 'smooth' });
+							} else if (event.key === 'Home' || event.key === 'End') {
+								event.preventDefault();
+								list.scrollTo({ left: event.key === 'Home' ? 0 : list.scrollWidth });
+							}
+						}}
 					>
-						<span ref={quickScrollThumb} className="quick-scroll-thumb" />
+						<span className="quick-scroll-thumb" style={{ width: `${quickScroll.fraction * 100}%`, left: `${quickScroll.progress * (1 - quickScroll.fraction) * 100}%` }} />
 					</div>
 				</div>
 			</div>
