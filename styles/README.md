@@ -4,30 +4,30 @@
 
 ## Где что менять
 
-| Задача                                                 | Файл                                                     |
-| ------------------------------------------------------ | -------------------------------------------------------- |
-| Цвета, фон, радиусы, базовый шаг отступов, тени        | `variables/tokens.css`                                   |
-| Связь переменных с Tailwind utilities и основной шрифт | `tailwind.css`                                           |
-| Базовые HTML-элементы и типографика                    | `base/reset.css`                                         |
-| Общий контейнер и его адаптивные отступы               | `base/layout.css`                                        |
-| Focus, skip link, скрытые подписи, reduced motion      | `base/accessibility.css`                                 |
-| Кнопки и текстовые ссылки                              | `components/buttons.css`                                 |
-| Checkbox, обёртки полей, ошибки                        | `components/inputs.css`                                  |
-| Кастомное меню выбора и его состояния                  | `components/select.css`                                  |
-| Теги, статусы, Remote / New badges                     | `components/badges.css`                                  |
-| Логотип компании и понятная fallback-иконка            | `components/company-logo.css`                            |
+| Задача                                                 | Файл                                                                          |
+| ------------------------------------------------------ | ----------------------------------------------------------------------------- |
+| Цвета, фон, радиусы, базовый шаг отступов, тени        | `variables/tokens.css`                                                        |
+| Связь переменных с Tailwind utilities и основной шрифт | `tailwind.css`                                                                |
+| Базовые HTML-элементы и типографика                    | `base/reset.css`                                                              |
+| Общий контейнер и его адаптивные отступы               | `base/layout.css`                                                             |
+| Focus, skip link, скрытые подписи, reduced motion      | `base/accessibility.css`                                                      |
+| Кнопки и текстовые ссылки                              | `components/buttons.css`                                                      |
+| Checkbox, обёртки полей, ошибки                        | `components/inputs.css`                                                       |
+| Кастомное меню выбора и его состояния                  | `components/select.css`                                                       |
+| Теги, статусы, Remote / New badges                     | `components/badges.css`                                                       |
+| Логотип компании и понятная fallback-иконка            | `components/company-logo.css`                                                 |
 | Фирменный логотип, header / footer                     | `components/brand-logo.tsx`, `components/header.css`, `components/footer.css` |
-| Общая форма поиска и быстрые категории                 | `components/search-bar.tsx`, `components/search.css`     |
-| Фильтры / мобильная панель                             | `components/filters.css`, `components/filter-drawer.css` |
-| Карточка вакансии                                      | `components/job-card.css`                                |
-| Пагинация                                              | `components/pagination.css`                              |
-| Пустая выдача, skeleton, ошибки, 404              | `components/feedback.css`                                |
-| Сетка выдачи, счётчик, сортировка, активные фильтры    | `pages/jobs.css`                                         |
-| Страница вакансии, типографика описания и Apply         | `pages/job-details.css`                                  |
-| SEO-страницы, закрытая вакансия и похожие роли           | `pages/seo.css`                                          |
-| Страница компаний                                      | `pages/companies.css`                                    |
-| Главная страница: hero, поиск, вакансии, компании      | `pages/home.css`                                         |
-| Вход и регистрация: роли, формы, адаптивность          | `components/auth-screen.tsx`, `pages/auth.css`           |
+| Общая форма поиска и быстрые категории                 | `components/search-bar.tsx`, `components/search.css`                          |
+| Фильтры / мобильная панель                             | `components/filters.css`, `components/filter-drawer.css`                      |
+| Карточка вакансии                                      | `components/job-card.css`                                                     |
+| Пагинация                                              | `components/pagination.css`                                                   |
+| Пустая выдача, skeleton, ошибки, 404                   | `components/feedback.css`                                                     |
+| Сетка выдачи, счётчик, сортировка, активные фильтры    | `pages/jobs.css`                                                              |
+| Страница вакансии, типографика описания и Apply        | `pages/job-details.css`                                                       |
+| SEO-страницы, закрытая вакансия и похожие роли         | `pages/seo.css`                                                               |
+| Страница компаний                                      | `pages/companies.css`                                                         |
+| Главная страница: hero, поиск, вакансии, компании      | `pages/home.css`                                                              |
+| Вход и регистрация: роли, формы, адаптивность          | `components/auth-screen.tsx`, `pages/auth.css`                                |
 
 Дополнительно: `pages/admin.css` — owner-панель, owner-вход и Privacy; подробная карта компонентов ниже. Admin → Discovery использует `components/admin/discovery.tsx` и те же карточки KPI, таблицы, поля поиска, кнопки и Select, что остальные разделы owner-панели. Новые `.admin-discovery-*` правила в `pages/admin.css` ограничены сеткой семи показателей, шириной прокручиваемой таблицы, ссылками и переносом текста ошибок.
 
@@ -35,7 +35,7 @@
 
 ## Навигация и повторяющиеся элементы
 
-- `public/logo/logo.webp` — единственный фирменный wordmark (прозрачный WebP, 1588×384). Общий `components/brand-logo.tsx` выводит его через `next/image` с заранее известным соотношением сторон. В `components/site-header.tsx` он заменяет текстовый знак в шапке и футере, в `components/auth-screen.tsx` — в шапке входа/регистрации, в `components/admin/nav.tsx` — в боковой/верхней навигации owner, в `components/admin/login.tsx` — над формой входа владельца. Ссылка на логотип ведёт на публичную главную, кроме admin sidebar, где она ведёт на `/admin`. У ссылок остаётся доступное имя, а изображение внутри них декоративно (`alt=""`). Старые `.brand-symbol` и `.brand-period` удалены; иконки действий продолжают использовать `Icon`.
+- `public/logo/logo-vmiyou.webp` — единственный фирменный wordmark (прозрачный WebP, 2573×1001). Общий `components/brand-logo.tsx` импортирует файл статически и выводит его через `next/image`: Next автоматически использует реальные размеры и создаёт URL с хешем содержимого, поэтому замена файла не остаётся в кеше оптимизатора под прежним URL. В `components/site-header.tsx` он заменяет текстовый знак в шапке и футере, в `components/auth-screen.tsx` — в шапке входа/регистрации, в `components/admin/nav.tsx` — в боковой/верхней навигации owner, в `components/admin/login.tsx` — над формой входа владельца. Ссылка на логотип ведёт на публичную главную, кроме admin sidebar, где она ведёт на `/admin`. У ссылок остаётся доступное имя, а изображение внутри них декоративно (`alt=""`). Старые `.brand-symbol` и `.brand-period` удалены; иконки действий продолжают использовать `Icon`.
 - Ширину марок задают `.brand` и `.brand-logo-image` в `components/header.css`: 150px на desktop и 130px до 640px. Футер задаёт 124px через `.footer-brand` в `components/footer.css`, owner sidebar — 150px и owner login — 160px через `pages/admin.css`. Высота вычисляется по пропорциям изображения, а ссылка сохраняет минимум 44px для нажатия; мобильные сетки header и auth не расширяются.
 - Фавиконы хранятся централизованно в `public/favicon/`. `metadata.icons` и `metadata.other` в `app/layout.tsx` явно подключают ICO, PNG 16–196px, все Apple Touch Icons и Microsoft tile metadata; `public/favicon/browserconfig.xml` сопоставляет четыре tile-изображения. Старый `app/icon.svg` удалён, поэтому Next.js не добавляет конкурирующую синюю иконку. При замене файлов сохраняют текущие имена и размеры — пути в metadata менять не потребуется.
 - `/` — отдельная главная страница. Логотип в header и footer ведёт на неё; Find Jobs и Jobs в мобильной панели ведут к полной выдаче `/jobs`. Hero использует сплошной `--brand`, остальные секции — белую поверхность; скругления и токены проекта сохраняются.
@@ -121,7 +121,6 @@
 - До 640px заголовки и подписи уменьшаются, профиль компании выстраивается компактно, пагинация переносится, тематические ссылки остаются удобными для касания. Существующая нижняя мобильная навигация сохраняется. Основные цвета, радиусы и контраст берутся из `variables/tokens.css`; новых глобальных переменных нет.
 - На `/jobs` номера страниц и Previous/Next теперь являются настоящими ссылками с `href`, сохраняя клиентское обновление фильтров при клике. `components/pagination.css` применяет одинаковые состояния к ссылкам и неактивным кнопкам. Для фильтрованных URL сервер выставляет `noindex`; canonical и sitemap формируются отдельно от CSS.
 
-
 ## Панель владельца и Privacy (Phase 4)
 
 - Публичный бренд, auth-экраны и owner workspace используют единое написание `vmiyou`; прежнее название не выводится в UI или metadata. Технические имена cookie, localStorage, очереди и локальной БД сохраняются для совместимости с существующими сессиями, privacy-настройками и Railway-данными.
@@ -137,7 +136,6 @@
 - Desktop: боковая навигация 220px, KPI в четыре колонки. До 1150px sidebar 180px; до 800px навигация становится верхним прокручиваемым рядом, KPI — две колонки, содержимое — одна. До 420px формы располагаются в одну колонку. `.admin-table-scroll` ограничивает высокие таблицы высотой окна и прокручивает их внутри контейнера; ячейки заголовка закреплены сверху, поэтому названия колонок остаются видимыми при вертикальной прокрутке. Широкие таблицы также прокручиваются по горизонтали и не растягивают страницу. Публичная мобильная панель не перекрывает admin.
 - `/privacy` использует общий контейнер и типографику, стили `.privacy-page`; `components/privacy-controls.tsx` включает/отключает аналитику на устройстве и показывает status. Аналитика уважает DNT/GPC, исключает auth/admin и owner-cookie; интерфейс работает при блокировке сбора.
 - Новых глобальных цветовых переменных нет: правки палитры по-прежнему в `variables/tokens.css`. Для admin действуют те же контраст, `focus-visible` и reduced motion, что и для публичного UI.
-
 
 ### Traffic & engagement chart
 
