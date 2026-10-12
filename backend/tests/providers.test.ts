@@ -120,6 +120,19 @@ test("Greenhouse uses a verified employer for the opaque HelloFresh alumni board
   assert.equal(jobs[0]?.description, "Plan production");
 });
 
+test("Greenhouse ignores null office locations without rejecting the board", async () => {
+  const jobs = await new GreenhouseProvider(async () => ({
+    jobs: [{ id: 1, internal_job_id: 1, title: "Payments Engineer",
+      content: "<p>Build payment systems</p>",
+      absolute_url: "https://example.com/jobs/1",
+      location: { name: "Amsterdam, Netherlands" },
+      offices: [{ location: null }, { location: "Amsterdam, Netherlands" }],
+    }], meta: { total: 1 },
+  })).fetch("adyen");
+  assert.equal(jobs.length, 1);
+  assert.equal(jobs[0]?.country, "NL");
+});
+
 test("opaque Greenhouse boards use a readable official board name when available", async () => {
   const calls: string[] = [];
   const jobs = await new GreenhouseProvider(async (url) => {

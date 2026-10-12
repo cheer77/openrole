@@ -28,7 +28,7 @@ const greenhouseSchema = z.object({
         content: z.string(),
         absolute_url: httpUrl,
         location: z.object({ name: z.string() }),
-        offices: z.array(z.object({ location: z.string().optional() })).optional(),
+        offices: z.array(z.object({ location: z.string().nullish() })).optional(),
         updated_at: z.string().nullish(),
       }),
     )
@@ -64,7 +64,8 @@ export class GreenhouseProvider implements JobProvider {
       .filter((job) => job.internal_job_id !== null)
       .map((job) => {
         const officeCountries = new Set((job.offices ?? [])
-          .map((office) => countryFromLocation(office.location)).filter((country): country is string => !!country));
+          .map((office) => office.location ? countryFromLocation(office.location) : null)
+          .filter((country): country is string => !!country));
         return normalize({
           externalId: String(job.id),
           title: job.title,

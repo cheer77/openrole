@@ -13,6 +13,10 @@ import { reclassifyJobs } from "./jobs/reclassify.js";
 async function main() {
   const db = createDb();
   await db.$connect();
+  // A hard restart cannot finish the ImportLog row owned by the previous
+  // worker process. Reconcile stale rows immediately instead of waiting for
+  // the next hourly scheduler tick.
+  await retainData(db);
   const queue = createQueue();
   await queue.setGlobalConcurrency(2);
   await queue.upsertJobScheduler(

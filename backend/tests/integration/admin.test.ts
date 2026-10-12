@@ -478,6 +478,13 @@ test("owner authentication, management, import overrides and private analytics",
             finishedAt: old,
           },
         });
+        const staleRunning = await db.importLog.create({
+          data: {
+            sourceId: source.id,
+            status: "RUNNING",
+            startedAt: new Date(Date.now() - 2 * 3600000),
+          },
+        });
         await db.adminSession.create({
           data: { tokenHash: "expired-test-" + uid, expiresAt: old },
         });
@@ -500,6 +507,12 @@ test("owner authentication, management, import overrides and private analytics",
           }),
           0,
         );
+        const interrupted = await db.importLog.findUniqueOrThrow({
+          where: { id: staleRunning.id },
+        });
+        assert.equal(interrupted.status, "INTERRUPTED");
+        assert.ok(interrupted.finishedAt);
+        assert.equal(interrupted.error, "Worker stopped before completing the import");
       },
     );
     await t.test(
