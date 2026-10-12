@@ -9,7 +9,7 @@ import {
   workTypes,
   type Filters,
 } from "./types.ts";
-export const PAGE_SIZE = 8;
+export const PAGE_SIZE = 9;
 export const sortOptions = [
   ["newest", "Newest first"],
   ["oldest", "Oldest first"],

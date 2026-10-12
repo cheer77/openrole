@@ -59,6 +59,27 @@ const paths = {
       <path d="M8 7V4h8v3M3 12c5 3 13 3 18 0M12 12v4" />
     </>
   ),
+  layoutGrid: (
+    <>
+      <rect x="3" y="3" width="7" height="7" rx="1.5" />
+      <rect x="14" y="3" width="7" height="7" rx="1.5" />
+      <rect x="3" y="14" width="7" height="7" rx="1.5" />
+      <rect x="14" y="14" width="7" height="7" rx="1.5" />
+    </>
+  ),
+  list: (
+    <>
+      <path d="M8 6h13M8 12h13M8 18h13" />
+      <path d="M3 6h.01M3 12h.01M3 18h.01" />
+    </>
+  ),
+  wallet: (
+    <>
+      <rect x="3" y="6" width="18" height="14" rx="2" />
+      <path d="M3 9V5a2 2 0 0 1 2-2h13M16 13h5M16 13v3h5" />
+    </>
+  ),
+  arrowUpRight: <path d="M7 17 17 7M8 7h9v9" />,
   check: <path d="m5 12 4 4L19 6" />,
   clock: (
     <>
@@ -78,11 +99,13 @@ export function Icon({
   size = 18,
   style,
   className = "",
+  strokeWidth = 1.6,
 }: {
   name: keyof typeof paths;
   size?: number;
   style?: CSSProperties;
   className?: string;
+  strokeWidth?: number;
 }) {
   return (
     <svg
@@ -91,7 +114,7 @@ export function Icon({
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.6"
+      strokeWidth={strokeWidth}
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"

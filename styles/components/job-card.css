@@ -321,3 +321,203 @@
 .job-card {
   overflow-wrap: anywhere;
 }
+
+/* Find Jobs uses one card hierarchy in both display modes. */
+.result-job-card[data-job-tone="0"] {
+  background: #fff9f8;
+  border-color: #f1e9e7;
+}
+.result-job-card[data-job-tone="1"] {
+  background: #f8faff;
+  border-color: #e8edf6;
+}
+.result-job-card[data-job-tone="2"] {
+  background: #f7fbf9;
+  border-color: #e5eee9;
+}
+.result-job-card:hover,
+.result-job-card:focus-within {
+  border-color: var(--brand-border);
+}
+.job-list > .result-job-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 18px 20px 14px;
+}
+.result-job-card .result-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+.result-card-company {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.result-card-company .company-logo {
+  flex: none;
+  width: 40px;
+  height: 40px;
+}
+.result-card-company .company-line {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+  line-height: 1.35;
+}
+.result-card-company .company-name {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+.result-card-category {
+  color: var(--text-secondary);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+.result-job-card .new-badge {
+  flex: none;
+  margin-top: 2px;
+  white-space: nowrap;
+}
+.result-job-card h3 {
+  color: var(--text);
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.025em;
+  margin: 13px 0 0;
+}
+.result-job-card .result-card-meta {
+  margin-top: 10px;
+  gap: 7px 14px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.result-card-meta > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.result-card-meta svg,
+.result-card-date svg {
+  flex: none;
+  color: #78869a;
+}
+.result-card-meta .work-remote svg {
+  color: inherit;
+}
+.result-card-meta .work-badge {
+  padding: 4px 7px;
+  font-size: 11px;
+  line-height: 1.3;
+}
+.result-job-card .result-card-preview {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 10px 0 0;
+}
+.result-job-card .result-card-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  border-top: 1px solid #17203514;
+  margin: 14px 0 0;
+  padding-top: 11px;
+}
+.result-card-bottom .card-salary {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+  color: var(--text);
+}
+.result-card-bottom .card-salary svg {
+  flex: none;
+  color: #78869a;
+}
+.result-card-bottom .card-salary strong {
+  color: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.4;
+  letter-spacing: 0;
+  white-space: normal;
+}
+.result-card-bottom .salary-unlisted {
+  color: var(--text-secondary);
+}
+.result-card-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.result-card-bottom .view-job {
+  min-height: 40px;
+  margin: 0;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+.job-card-list .result-card-bottom {
+  justify-content: flex-start;
+}
+.job-card-list .result-card-bottom .view-job {
+  margin-left: auto;
+}
+.job-list-grid > .result-job-card {
+  padding: 15px;
+}
+.job-card-grid h3 {
+  font-size: 17px;
+  margin-top: 11px;
+}
+.job-card-grid .result-card-meta {
+  margin-top: 8px;
+  gap: 6px 12px;
+}
+.job-card-grid .result-card-preview {
+  margin-top: 8px;
+}
+.job-card-grid .result-card-bottom {
+  flex-wrap: nowrap;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 9px;
+}
+.job-card-grid .result-card-bottom .card-salary {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.job-card-grid .result-card-bottom .view-job {
+  flex: none;
+}
+@media (max-width: 640px) {
+  .job-list > .result-job-card {
+    padding: 16px;
+  }
+  .result-job-card h3 {
+    font-size: 17px;
+  }
+  .result-card-bottom .view-job {
+    min-height: 44px;
+  }
+}

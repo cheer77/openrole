@@ -5,6 +5,7 @@ import {
 	useState,
 	useTransition,
 	useOptimistic,
+	useSyncExternalStore,
 } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -56,6 +57,33 @@ const quickFilters: {
 		value: category,
 	})),
 ];
+const JOBS_VIEW_KEY = 'vmiyou:jobs-view';
+const JOBS_VIEW_EVENT = 'vmiyou:jobs-view-change';
+const NARROW_JOBS_VIEW = '(max-width: 767.98px)';
+type JobsView = 'grid' | 'list';
+let fallbackView: JobsView = 'grid';
+function getJobsView(): JobsView {
+	if (window.matchMedia(NARROW_JOBS_VIEW).matches) return 'grid';
+	try {
+		return window.localStorage.getItem(JOBS_VIEW_KEY) === 'list' ? 'list' : 'grid';
+	} catch {
+		return fallbackView;
+	}
+}
+function subscribeJobsView(callback: () => void) {
+	const narrowViewport = window.matchMedia(NARROW_JOBS_VIEW);
+	window.addEventListener('storage', callback);
+	window.addEventListener(JOBS_VIEW_EVENT, callback);
+	narrowViewport.addEventListener('change', callback);
+	return () => {
+		window.removeEventListener('storage', callback);
+		window.removeEventListener(JOBS_VIEW_EVENT, callback);
+		narrowViewport.removeEventListener('change', callback);
+	};
+}
+function getServerJobsView(): JobsView {
+	return 'grid';
+}
 export function JobsExplorer({
 	result,
 	error,
@@ -70,6 +98,16 @@ export function JobsExplorer({
 	const pathname = usePathname();
 	const router = useRouter();
 	const [pending, startTransition] = useTransition();
+	const view = useSyncExternalStore(subscribeJobsView, getJobsView, getServerJobsView);
+	function changeView(next: JobsView) {
+		fallbackView = next;
+		try {
+			window.localStorage.setItem(JOBS_VIEW_KEY, next);
+		} catch {
+			// The selected view still works for this visit when storage is disabled.
+		}
+		window.dispatchEvent(new Event(JOBS_VIEW_EVENT));
+	}
 	const [filters, setOptimisticFilters] = useOptimistic(
 		parseFilters(new URLSearchParams(appliedQuery)),
 	);
@@ -361,31 +399,43 @@ export function JobsExplorer({
 								)}
 							</h2>
 						</div>
-						<label className="sort-control">
-							<span className="sort-label" aria-hidden="true">
-								Sort by
-							</span>
-							<span className="sr-only">Sort jobs</span>
-							<Select
-								aria-label="Sort jobs"
-								value={filters.sort}
-								onChange={(value) =>
-									update({
-										sort: value,
-										...(value.startsWith('salary') && !filters.currency
-											? { currency: 'USD' }
-											: {}),
-									})
-								}
-							>
-								{sortOptions.map(([value, label]) => (
-									<option key={value} value={value}>
-										{label}
-									</option>
-								))}
-							</Select>
-							<Icon name="down" size={14} />
-						</label>
+						<div className="results-actions">
+							<label className="sort-control">
+								<span className="sort-label" aria-hidden="true">
+									Sort by
+								</span>
+								<span className="sr-only">Sort jobs</span>
+								<Select
+									aria-label="Sort jobs"
+									value={filters.sort}
+									onChange={(value) =>
+										update({
+											sort: value,
+											...(value.startsWith('salary') && !filters.currency
+												? { currency: 'USD' }
+												: {}),
+										})
+									}
+								>
+									{sortOptions.map(([value, label]) => (
+										<option key={value} value={value}>
+											{label}
+										</option>
+									))}
+								</Select>
+								<Icon name="down" size={14} />
+							</label>
+							<div className="view-switch" role="group" aria-label="Job view">
+								<button type="button" aria-pressed={view === 'grid'} onClick={() => changeView('grid')}>
+									<Icon name="layoutGrid" size={17} strokeWidth={1.8} />
+									Grid
+								</button>
+								<button type="button" aria-pressed={view === 'list'} onClick={() => changeView('list')}>
+									<Icon name="list" size={17} strokeWidth={1.8} />
+									List
+								</button>
+							</div>
+						</div>
 					</div>
 					<div className="results-subline">
 						<p aria-live="polite" role="status">
@@ -451,9 +501,9 @@ export function JobsExplorer({
 							</button>
 						</div>
 					) : (
-						<div className="job-list">
+						<div className={`job-list${view === 'grid' ? ' job-list-grid' : ''}`}>
 							{visible.map((job) => (
-								<JobCard key={job.id} job={job} now={now} returnQuery={query} />
+								<JobCard key={job.id} job={job} now={now} returnQuery={query} variant={view} />
 							))}
 						</div>
 					)}

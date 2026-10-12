@@ -1,11 +1,101 @@
 import { selectOption } from "./select-helper";
 import { test, expect } from "@playwright/test";
 
+test("Grid is default and List persists without changing search state", async ({ page }) => {
+  await page.setViewportSize({ width: 800, height: 850 });
+  await page.goto("/jobs?q=Linear&sort=oldest");
+  const grid = page.getByRole("button", { name: "Grid", exact: true });
+  const list = page.getByRole("button", { name: "List", exact: true });
+  await expect(grid).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".job-list-grid .job-card-grid")).toHaveCount(3);
+  const gridCard = page.locator('.job-card[data-job-id="job-1"]');
+  const tone = await gridCard.getAttribute("data-job-tone");
+  const background = await gridCard.evaluate((element) => getComputedStyle(element).backgroundColor);
+  expect(tone).toMatch(/^[0-2]$/);
+  await expect(gridCard.locator(".new-badge")).toHaveText("New today");
+  const preview = await gridCard.locator(".job-preview").textContent();
+  expect(preview).toBeTruthy();
+  expect(await gridCard.locator(".job-preview").evaluate((element) => getComputedStyle(element).webkitLineClamp)).toBe("2");
+  await expect(gridCard.locator(".result-card-meta .result-card-date")).toHaveCount(1);
+  await expect(gridCard.locator(".result-card-bottom .result-card-date")).toHaveCount(0);
+  const footerBounds = await gridCard.locator(".result-card-bottom").boundingBox();
+  const salaryBounds = await gridCard.locator(".card-salary").boundingBox();
+  const actionBounds = await gridCard.locator(".view-job").boundingBox();
+  expect(footerBounds && salaryBounds && actionBounds).toBeTruthy();
+  expect(salaryBounds!.x + salaryBounds!.width).toBeLessThan(actionBounds!.x);
+  expect(actionBounds!.x + actionBounds!.width).toBeLessThanOrEqual(footerBounds!.x + footerBounds!.width + 1);
+  const filteredUrl = page.url();
+
+  await list.click();
+  await expect(list).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".job-list .job-card-top")).toHaveCount(3);
+  const listCard = page.locator('.job-card[data-job-id="job-1"]');
+  await expect(listCard).toHaveAttribute("data-job-tone", tone!);
+  expect(await listCard.evaluate((element) => getComputedStyle(element).backgroundColor)).toBe(background);
+  await expect(listCard.locator(".new-badge")).toHaveText("New today");
+  await expect(listCard.locator(".job-preview")).toHaveText(preview!);
+  await expect(listCard.locator(".result-card-meta .result-card-date")).toHaveCount(0);
+  await expect(listCard.locator(".result-card-bottom .result-card-date")).toHaveCount(1);
+  if (page.viewportSize()!.width > 600) {
+    const listSalary = await listCard.locator(".card-salary").boundingBox();
+    const listDate = await listCard.locator(".result-card-date").boundingBox();
+    const listAction = await listCard.locator(".view-job").boundingBox();
+    expect(listSalary && listDate && listAction).toBeTruthy();
+    expect(listDate!.x - (listSalary!.x + listSalary!.width)).toBeLessThanOrEqual(13);
+    expect(listDate!.x + listDate!.width).toBeLessThan(listAction!.x);
+  }
+  expect(page.url()).toBe(filteredUrl);
+
+  await page.reload();
+  await expect(list).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".job-list .job-card-top")).toHaveCount(3);
+
+  await page.goto("/jobs?page=2");
+  await expect(list).toHaveAttribute("aria-pressed", "true");
+  const pagedUrl = page.url();
+  await grid.click();
+  await expect(grid).toHaveAttribute("aria-pressed", "true");
+  expect(page.url()).toBe(pagedUrl);
+  await page.reload();
+  await expect(grid).toHaveAttribute("aria-pressed", "true");
+  await page.setViewportSize({ width: 320, height: 800 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.setViewportSize({ width: 280, height: 800 });
+  const narrowCard = page.locator(".job-card-grid").first();
+  const narrowSalary = await narrowCard.locator(".card-salary").boundingBox();
+  const narrowAction = await narrowCard.locator(".view-job").boundingBox();
+  const narrowBounds = await narrowCard.boundingBox();
+  expect(narrowSalary && narrowAction && narrowBounds).toBeTruthy();
+  expect(narrowSalary!.x + narrowSalary!.width).toBeLessThan(narrowAction!.x);
+  expect(narrowAction!.x + narrowAction!.width).toBeLessThanOrEqual(narrowBounds!.x + narrowBounds!.width);
+});
+
+test("screens below 768px use Grid while retaining the desktop List preference", async ({ page }) => {
+  await page.setViewportSize({ width: 800, height: 850 });
+  await page.goto("/jobs?q=Linear");
+  const switcher = page.getByRole("group", { name: "Job view" });
+  const list = page.getByRole("button", { name: "List", exact: true });
+  await list.click();
+  await expect(page.locator(".job-card-list")).toHaveCount(3);
+
+  await page.setViewportSize({ width: 767, height: 850 });
+  await expect(switcher).toBeHidden();
+  await expect(page.locator(".job-card-grid")).toHaveCount(3);
+  await page.reload();
+  await expect(switcher).toBeHidden();
+  await expect(page.locator(".job-card-grid")).toHaveCount(3);
+
+  await page.setViewportSize({ width: 768, height: 850 });
+  await expect(switcher).toBeVisible();
+  await expect(list).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".job-card-list")).toHaveCount(3);
+});
+
 test("search, URL sharing, empty state and reset", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/jobs");
-  await expect(page.locator(".job-card")).toHaveCount(8);
+  await expect(page.locator(".job-card")).toHaveCount(9);
   await page
     .getByRole("textbox", { name: "Job title, company, or keyword" })
     .fill("NestJS");
@@ -28,7 +118,7 @@ test("search, URL sharing, empty state and reset", async ({ page }) => {
   await page
     .getByRole("button", { name: "Explore all jobs", exact: true })
     .click();
-  await expect(page.locator(".job-card")).toHaveCount(8);
+  await expect(page.locator(".job-card")).toHaveCount(9);
   expect(errors).toEqual([]);
 });
 
@@ -121,7 +211,7 @@ test("pagination, detail content, return state, external Apply", async ({
   ).toHaveAttribute("aria-current", "page");
   await page.locator(".view-job").first().click();
   await expect(
-    page.getByRole("heading", { name: "Mobile Engineer, iOS", level: 1 }),
+    page.getByRole("heading", { name: "QA Automation Engineer", level: 1 }),
   ).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Is this role open to you?" }),
@@ -132,7 +222,7 @@ test("pagination, detail content, return state, external Apply", async ({
   const apply = page.locator("a.apply-button:visible").first();
   await expect(apply).toHaveAttribute("target", "_blank");
   await expect(apply).toHaveAttribute("rel", "noopener noreferrer");
-  await context.route("https://monzo.com/careers", (route) =>
+  await context.route("https://www.typeform.com/careers/", (route) =>
     route.fulfill({
       status: 200,
       contentType: "text/html",
@@ -142,12 +232,12 @@ test("pagination, detail content, return state, external Apply", async ({
   const popupPromise = page.waitForEvent("popup");
   await apply.click();
   const popup = await popupPromise;
-  await expect(popup).toHaveURL("https://monzo.com/careers");
+  await expect(popup).toHaveURL("https://www.typeform.com/careers/");
   await popup.close();
   await page.getByRole("link", { name: "Back to all jobs" }).click();
   await expect(page).toHaveURL(/page=2/);
   await expect(page.locator(".job-card h3").first()).toHaveText(
-    "Mobile Engineer, iOS",
+    "QA Automation Engineer",
   );
 });
 

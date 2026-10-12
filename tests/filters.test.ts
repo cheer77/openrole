@@ -53,7 +53,7 @@ test("UI query maps to backend contract without leaking UI keys", () => {
   assert.equal(query.get("companyName"), "Acme");
   assert.equal(query.get("employmentKind"), "Contract");
   assert.equal(query.get("currency"), "USD");
-  assert.equal(query.get("limit"), "8");
+  assert.equal(query.get("limit"), "9");
   assert.equal(query.get("page"), "2");
   assert.equal(query.has("q"), false);
   assert.equal(query.has("tech"), false);
