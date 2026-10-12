@@ -3,6 +3,7 @@ import type { Job } from "./types";
 import { CompanyLogo } from "@/components/company-logo";
 import { Icon } from "@/components/icon";
 import { formatSalary, locationLabel, timeAgo } from "@/lib/format";
+import { ResultJobTitle } from "./result-job-title";
 
 export function JobCard({
   job,
@@ -36,11 +37,7 @@ export function JobCard({
           </div>
           {fresh && <span className="new-badge">New today</span>}
         </div>
-        <h3>
-          <Link href={href} className="card-title-link" title={job.title}>
-            {job.title}
-          </Link>
-        </h3>
+        <ResultJobTitle href={href} title={job.title} />
         <div className="job-meta result-card-meta">
           <span>
             <Icon name="pin" size={16} strokeWidth={1.8} />
