@@ -27,6 +27,9 @@ export function ResourceList({ resource, initialEntity, initialStatus }: { resou
   const [editing, setEditing] = useState<AdminItem | null>(null);
   const [viewing, setViewing] = useState<AdminItem | null>(null);
   const [deleting, setDeleting] = useState<AdminItem | null>(null);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [selectedJobIds, setSelectedJobIds] = useState<string[]>([]);
+  const [allPagesSelected, setAllPagesSelected] = useState(false);
   const [message, setMessage] = useState("");
   const [failure, setFailure] = useState("");
   const [busy, setBusy] = useState(false);
@@ -56,6 +59,8 @@ export function ResourceList({ resource, initialEntity, initialStatus }: { resou
     try {
       await adminMutation(path, method, body);
       setMessage(success);
+      setSelectedJobIds([]);
+      setAllPagesSelected(false);
       setRevision((v) => v + 1);
       return true;
     } catch (error) {
@@ -115,6 +120,8 @@ export function ResourceList({ resource, initialEntity, initialStatus }: { resou
         className="admin-toolbar"
         onSubmit={(e) => {
           e.preventDefault();
+          setSelectedJobIds([]);
+          setAllPagesSelected(false);
           setPage(1);
           setSearch(draftSearch.trim());
         }}
@@ -133,6 +140,8 @@ export function ResourceList({ resource, initialEntity, initialStatus }: { resou
             setDraftSearch("");
             setSearch("");
             setStatus("");
+            setSelectedJobIds([]);
+            setAllPagesSelected(false);
             setPage(1);
             if (initialStatus || initialEntity) router.replace("/admin/" + resource);
           }}
@@ -144,6 +153,8 @@ export function ResourceList({ resource, initialEntity, initialStatus }: { resou
             value={status}
             onChange={(v) => {
               setStatus(v);
+              setSelectedJobIds([]);
+              setAllPagesSelected(false);
               setPage(1);
             }}
           >
@@ -156,7 +167,11 @@ export function ResourceList({ resource, initialEntity, initialStatus }: { resou
         <button
           className="admin-button"
           type="button"
-          onClick={() => setRevision((v) => v + 1)}
+          onClick={() => {
+            setSelectedJobIds([]);
+            setAllPagesSelected(false);
+            setRevision((v) => v + 1);
+          }}
         >
           Refresh
         </button>
@@ -171,6 +186,15 @@ export function ResourceList({ resource, initialEntity, initialStatus }: { resou
         <p className="field-error" role="alert">
           {failure || error}
         </p>
+      )}
+      {resource === "jobs" && status === "CLOSED" && data && data.items.length > 0 && (
+        <div className="admin-bulk-actions" aria-label="Closed job selection">
+          <strong>{allPagesSelected ? `${data.total} selected across all pages` : `${selectedJobIds.length} selected`}</strong>
+          <button className="admin-button" type="button" disabled={busy} onClick={() => { setAllPagesSelected(false); setSelectedJobIds(data.items.map((item) => item.id)); }}>Select page</button>
+          <button className="admin-button" type="button" disabled={busy} onClick={() => { setAllPagesSelected(true); setSelectedJobIds([]); }}>Select all pages</button>
+          {(allPagesSelected || selectedJobIds.length > 0) && <button className="admin-button" type="button" disabled={busy} onClick={() => { setAllPagesSelected(false); setSelectedJobIds([]); }}>Clear</button>}
+          <button className="admin-button danger" type="button" disabled={busy || (!allPagesSelected && selectedJobIds.length === 0)} onClick={() => setBulkDeleting(true)}>Delete selected</button>
+        </div>
       )}
       <section className="admin-panel admin-resource-panel" aria-busy={loading}>
         {loading ? (
@@ -194,6 +218,7 @@ export function ResourceList({ resource, initialEntity, initialStatus }: { resou
                     <tr>
                       {resource === "jobs" ? (
                         <>
+                          {status === "CLOSED" && <th className="admin-selection-column"><span className="sr-only">Select</span></th>}
                           <th>Role / company</th>
                           <th>Status</th>
                           <th>Source</th>
@@ -230,6 +255,21 @@ export function ResourceList({ resource, initialEntity, initialStatus }: { resou
                       <tr key={item.id}>
                         {resource === "jobs" ? (
                           <>
+                            {status === "CLOSED" && (
+                              <td className="admin-selection-column">
+                                <input
+                                  type="checkbox"
+                                  aria-label={`Select ${item.title}`}
+                                  checked={allPagesSelected || selectedJobIds.includes(item.id)}
+                                  onChange={(event) => {
+                                    if (allPagesSelected) setAllPagesSelected(false);
+                                    setSelectedJobIds((current) => event.target.checked
+                                      ? [...new Set([...current, item.id])]
+                                      : current.filter((id) => id !== item.id));
+                                  }}
+                                />
+                              </td>
+                            )}
                             <td>
                               <strong>{item.title}</strong>
                               <small>{item.company?.name}</small>
@@ -476,7 +516,11 @@ export function ResourceList({ resource, initialEntity, initialStatus }: { resou
                   <button
                     className="admin-button"
                     disabled={page === 1}
-                    onClick={() => setPage((p) => p - 1)}
+                    onClick={() => {
+                      setSelectedJobIds([]);
+                      setAllPagesSelected(false);
+                      setPage((p) => p - 1);
+                    }}
                   >
                     Previous
                   </button>
@@ -486,7 +530,11 @@ export function ResourceList({ resource, initialEntity, initialStatus }: { resou
                   <button
                     className="admin-button"
                     disabled={page >= data.pages}
-                    onClick={() => setPage((p) => p + 1)}
+                    onClick={() => {
+                      setSelectedJobIds([]);
+                      setAllPagesSelected(false);
+                      setPage((p) => p + 1);
+                    }}
                   >
                     Next
                   </button>
@@ -545,6 +593,29 @@ export function ResourceList({ resource, initialEntity, initialStatus }: { resou
               {failure}
             </p>
           )}
+        </Modal>
+      )}
+      {bulkDeleting && (
+        <Modal title={`Delete ${allPagesSelected ? data?.total ?? 0 : selectedJobIds.length} closed jobs?`} onClose={() => setBulkDeleting(false)}>
+          <p>This permanently removes the selected listings and prevents their sources from importing them again. Analytics counts remain anonymous.</p>
+          <div className="admin-form-actions">
+            <button className="admin-button" onClick={() => setBulkDeleting(false)}>Cancel</button>
+            <button
+              className="primary-button"
+              disabled={busy}
+              onClick={async () => {
+                const selectedCount = allPagesSelected ? data?.total ?? 0 : selectedJobIds.length;
+                const body = allPagesSelected ? { all: true, search } : { ids: selectedJobIds };
+                if (await change("jobs/bulk-delete", "POST", body, `${selectedCount} closed jobs deleted.`)) {
+                  setBulkDeleting(false);
+                  setSelectedJobIds([]);
+                  setAllPagesSelected(false);
+                }
+              }}
+            >
+              Delete selected
+            </button>
+          </div>
         </Modal>
       )}
     </>

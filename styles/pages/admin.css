@@ -875,6 +875,36 @@ body:has(.owner-login) {
 .admin-toolbar .primary-button {
 	min-height: 44px;
 }
+.admin-bulk-actions {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin: -4px 0 14px;
+}
+.admin-bulk-actions strong {
+	margin-right: 4px;
+	color: var(--text-secondary);
+	font-size: 12px;
+}
+.admin-button.danger {
+	border-color: var(--brand-border);
+	color: var(--brand-hover);
+}
+.admin-button.danger:hover {
+	border-color: var(--brand);
+	background: var(--brand-soft);
+}
+.admin-selection-column {
+	width: 42px;
+	text-align: center;
+}
+.admin-selection-column input {
+	width: 18px;
+	height: 18px;
+	accent-color: var(--brand);
+	cursor: pointer;
+}
 .admin-pagination {
 	display: flex;
 	align-items: center;

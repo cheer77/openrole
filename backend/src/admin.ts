@@ -291,6 +291,50 @@ export class AdminController {
       return { ok: true };
     });
   }
+  @Post("jobs/bulk-delete") async bulkDeleteJobs(@Body() input: unknown) {
+    const data = parse(
+      z.union([
+        z.object({ ids: z.array(z.string().min(1).max(100)).min(1).max(20) }).strict(),
+        z.object({ all: z.literal(true), search: z.string().max(150).default("") }).strict(),
+      ]),
+      input,
+    );
+    return this.db.client.$transaction(async (tx) => {
+      const jobs = await tx.job.findMany({
+        where: "ids" in data
+          ? { id: { in: [...new Set(data.ids)] }, status: "CLOSED" }
+          : {
+              status: "CLOSED",
+              ...(data.search ? { OR: [
+                { title: { contains: data.search, mode: "insensitive" } },
+                { company: { name: { contains: data.search, mode: "insensitive" } } },
+              ] } : {}),
+            },
+        select: { id: true, sourceId: true, externalId: true },
+      });
+      if ("ids" in data && jobs.length !== new Set(data.ids).size)
+        throw new BadRequestException("Only existing closed jobs can be deleted in bulk");
+      if (!jobs.length) throw new BadRequestException("No closed jobs match this selection");
+      const sourceIds = [...new Set(jobs.map((job) => job.sourceId))].sort();
+      for (const sourceId of sourceIds) {
+        const locks = await tx.$queryRaw<{ locked: boolean }[]>`
+          SELECT pg_try_advisory_xact_lock(hashtext(${sourceId})) AS locked
+        `;
+        if (!locks[0]?.locked)
+          throw new ConflictException("A selected source is importing. Please retry after the import finishes.");
+      }
+      await tx.deletedJob.createMany({
+        data: jobs.map((job) => ({ sourceId: job.sourceId, externalId: job.externalId })),
+        skipDuplicates: true,
+      });
+      await tx.job.deleteMany({ where: { id: { in: jobs.map((job) => job.id) } } });
+      await audit(tx, "JOBS_BULK_DELETED", "job", "bulk", {
+        allPages: "all" in data,
+        count: String(jobs.length),
+      });
+      return { ok: true, deleted: jobs.length };
+    }, { maxWait: 5000, timeout: 120000 });
+  }
   private async withJob<T>(
     id: string,
     mutate: (tx: Prisma.TransactionClient, job: Job) => Promise<T>,
