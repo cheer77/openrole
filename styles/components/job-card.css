@@ -324,16 +324,12 @@
 
 /* Find Jobs uses one card hierarchy in both display modes. */
 .result-job-card[data-job-tone='0'] {
-	background: #fff9f8;
-	border-color: #f1e9e7;
+	background: #fef9f9;
+	border-color: #f2ded9;
 }
 .result-job-card[data-job-tone='1'] {
-	background: #f8faff;
-	border-color: #e8edf6;
-}
-.result-job-card[data-job-tone='2'] {
-	background: #f7fbf9;
-	border-color: #e5eee9;
+	background: #f9f8ff;
+	border-color: #e5e1f5;
 }
 .result-job-card:hover,
 .result-job-card:focus-within {

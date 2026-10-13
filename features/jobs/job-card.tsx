@@ -25,7 +25,7 @@ export function JobCard({
       <article
         className={`job-card result-job-card ${variant === "grid" ? "job-card-grid" : "job-card-list"}`}
         data-job-id={job.id}
-        data-job-tone={tone % 3}
+        data-job-tone={tone % 2}
       >
         <div className="job-card-top result-card-top">
           <div className="result-card-company">
