@@ -20,6 +20,7 @@ export function JobCard({
 }) {
   const fresh = now - new Date(job.publishedAt || job.firstSeenAt).getTime() < 86400000;
   const href = `/jobs/${job.slug}${returnQuery ? `?from=${encodeURIComponent(returnQuery)}` : ""}`;
+  const showWorkType = job.workType !== "Not specified";
   if (variant !== "legacy") {
     let tone = 0;
     for (const character of job.id) tone = (tone * 31 + character.charCodeAt(0)) >>> 0;
@@ -45,10 +46,12 @@ export function JobCard({
             <Icon name="pin" size={16} strokeWidth={1.8} />
             {locationLabel(job)}
           </span>
-          <span className={`work-badge ${job.workType === "Remote" ? "work-remote" : ""}`}>
-            {job.workType === "Remote" && <Icon name="globe" size={16} strokeWidth={1.8} />}
-            {job.workType}
-          </span>
+          {showWorkType && (
+            <span className="work-badge">
+              {job.workType === "Remote" && <Icon name="globe" size={16} strokeWidth={1.8} />}
+              {job.workType}
+            </span>
+          )}
           {job.employmentKind && <span><Icon name="briefcase" size={16} strokeWidth={1.8} />{job.employmentKind}</span>}
           {variant === "grid" && (
             <time className="result-card-date" dateTime={job.publishedAt || job.firstSeenAt}>
@@ -103,12 +106,12 @@ export function JobCard({
       </div>
       <div className="card-content">
         <div className="job-meta">
-          <span
-            className={`work-badge ${job.workType === "Remote" ? "work-remote" : ""}`}
-          >
-            {job.workType === "Remote" && <Icon name="globe" size={14} />}
-            {job.workType}
-          </span>
+          {showWorkType && (
+            <span className="work-badge">
+              {job.workType === "Remote" && <Icon name="globe" size={14} />}
+              {job.workType}
+            </span>
+          )}
           <span>
             <Icon name="pin" size={15} />
             {locationLabel(job)}

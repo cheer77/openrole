@@ -15,16 +15,15 @@
   flex-shrink: 0;
 }
 .work-badge {
-  background: #f0f2f6;
-  color: #526078;
+  background: var(--brand-soft);
+  color: var(--brand-hover);
   padding: 3px 7px;
   border-radius: 4px;
   font-size: 11px;
   font-weight: 550;
 }
-.work-remote {
-  background: var(--brand-soft);
-  color: var(--brand-hover);
+.job-meta .work-badge svg {
+  color: inherit;
 }
 .tech-tags {
   display: flex;
