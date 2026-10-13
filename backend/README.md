@@ -87,7 +87,7 @@ docker compose exec -T api node dist/src/cli.js sync
 
 `GET /health` проверяет PostgreSQL и возвращает 503 при недоступности.
 
-`GET /jobs` возвращает `{ items, total, page, limit, pages, currency }`. В списке нет полного description; `GET /jobs/:slug` возвращает полную вакансию и компанию. Закрытые, скрытые и вакансии выключенных источников возвращают 404.
+`GET /jobs` возвращает `{ items, total, page, limit, pages, currency }`. В списке нет полного description; `GET /jobs/:slug` возвращает полную вакансию и компанию. Закрытые, скрытые и вакансии выключенных источников возвращают 404. При непустом `search` сортировка по умолчанию — `relevance`: PostgreSQL применяет действующие фильтры, затем ранжирует совпадения в названии, категории/технологиях, компании и описании, учитывая количество слов и свежесть при равном score. Без поиска по умолчанию остаётся `newest`; явный `sort` сохраняет приоритет пользователя. Миграции `20261013000000_job_search_relevance` и `20261013010000_job_search_short_terms` включают `pg_trgm`, trigram- и full-text GIN-индексы поисковых полей. Для локальной диагностики можно запустить backend с `NODE_ENV=development SEARCH_DEBUG=1`: score и его основные сигналы вакансий текущей страницы записываются в серверный лог, не в публичный ответ.
 
 Параметры поиска:
 
@@ -103,7 +103,7 @@ docker compose exec -T api node dist/src/cli.js sync
 | `salaryMin`, `salaryMax` | пересечение с годовым диапазоном, неотрицательные числа |
 | `currency` | трёхбуквенный код в верхнем регистре; для зарплатного фильтра/сортировки по умолчанию USD |
 | `posted` | 1, 3, 7, 30 дней |
-| `sort` | newest (по умолчанию), oldest, salary-high, salary-low |
+| `sort` | relevance (по умолчанию при search), newest (без search), oldest, salary-high, salary-low |
 | `page`, `limit` | page 1–10000, limit 1–100 (по умолчанию 20) |
 
 Пример: `GET /jobs?search=Frontend&remoteType=REMOTE&technologies=React&sort=newest&page=1&limit=20`.

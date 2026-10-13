@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { Prisma } from "./generated/prisma/client.js";
 import { employmentKinds } from "./jobs/classification.js";
 
-const countryNames: Record<string, string> = {
+export const countryNames: Record<string, string> = {
   germany: "DE", spain: "ES", france: "FR", italy: "IT", poland: "PL",
   austria: "AT", switzerland: "CH", netherlands: "NL", belgium: "BE",
   portugal: "PT", ireland: "IE", sweden: "SE", norway: "NO",
@@ -57,9 +57,7 @@ export const jobsQuerySchema = z
     posted: z.enum(["1", "3", "7", "30"]).optional(),
     page: z.coerce.number().int().min(1).max(10000).default(1),
     limit: z.coerce.number().int().min(1).max(100).default(20),
-    sort: z
-      .enum(["newest", "oldest", "salary-high", "salary-low"])
-      .default("newest"),
+    sort: z.enum(["relevance", "newest", "oldest", "salary-high", "salary-low"]).optional(),
   })
   .strict()
   .refine(
@@ -71,7 +69,8 @@ export const jobsQuerySchema = z
   );
 
 export function jobsQuery(input: unknown, now = new Date()) {
-  const query = jobsQuerySchema.parse(input);
+  const parsed = jobsQuerySchema.parse(input);
+  const query = { ...parsed, sort: parsed.sort ?? (parsed.search?.trim() ? "relevance" : "newest") };
   const salary =
     query.sort.startsWith("salary") ||
     query.salaryMin !== undefined ||

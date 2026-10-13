@@ -190,6 +190,9 @@ export function JobsExplorer({
 	const query = appliedQuery;
 	function update(patch: Partial<Filters>) {
 		if (patch.page === undefined) activity('FILTER');
+		if (patch.q !== undefined && patch.q !== filters.q && patch.sort === undefined) {
+			patch = { ...patch, sort: patch.q ? (filters.sort === 'newest' ? 'relevance' : filters.sort) : (filters.sort === 'relevance' ? 'newest' : filters.sort) };
+		}
 		const nextFilters = parseFilters(
 			serializeFilters({ ...filters, ...patch, page: patch.page ?? 1 }),
 		);

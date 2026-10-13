@@ -137,6 +137,48 @@ test("PostgreSQL synchronization and API regression", async (t) => {
       },
     );
 
+    await t.test("search ranks title coverage above broad and description matches", async () => {
+      const titles = [
+        "Supplier Relationship Manager", "Senior Supplier Relationship Manager",
+        "Supplier Manager", "Supply Chain Program Manager", "Frontend Developer",
+        "Backend Developer", "Software Engineer", "Registered Nurse",
+        "React Developer", "React Project Manager", "Java Developer", "Developer", "AI Engineer",
+      ];
+      await db.job.createMany({ data: titles.map((title, index) => ({
+        externalId: `ranking-${index}`, slug: `ranking-${index}-${uid}`,
+        title, companyId: company.id, sourceId: source.id,
+        description: index === 6 ? "Nurse Frontend Supplier Relationship Manager React Developer" : "A vacancy",
+        shortDescription: "A vacancy", category: "Other", location: "Madrid", country: "ES",
+        sourceUrl: `https://example.com/ranking-${index}`, applyUrl: `https://example.com/ranking-${index}`,
+        lastCheckedAt: new Date(), sortDate: new Date(Date.now() - index * 1000),
+      })) });
+      try {
+      const ranked = async (search: string) => {
+        const response = await fetch(`${base}/jobs?search=${encodeURIComponent(search)}&company=${company.slug}&limit=30`);
+        assert.equal(response.status, 200);
+        return (await response.json()).items.map((job: { title: string }) => job.title);
+      };
+      const supplier = await ranked("Supplier Relationship Manager");
+      assert.equal(supplier[0], "Supplier Relationship Manager");
+      assert.ok(supplier.indexOf("Supplier Manager") < supplier.indexOf("Supply Chain Program Manager"));
+      const frontend = await ranked("Frontend Developer");
+      assert.ok(frontend.indexOf("Frontend Developer") < frontend.indexOf("Backend Developer"));
+      assert.ok(frontend.indexOf("Frontend Developer") < frontend.indexOf("Software Engineer"));
+      const nurse = await ranked("Nurse");
+      assert.ok(nurse.indexOf("Registered Nurse") < nurse.indexOf("Software Engineer"));
+      const react = await ranked("React Developer");
+      assert.ok(react.indexOf("React Developer") < react.indexOf("Java Developer"));
+      assert.ok(react.indexOf("React Developer") < react.indexOf("React Project Manager"));
+      assert.ok((await ranked("Suppli Relationship Manager")).includes("Supplier Relationship Manager"));
+      assert.ok((await ranked("AI")).includes("AI Engineer"));
+      const oldest = await fetch(`${base}/jobs?search=Supplier&company=${company.slug}&sort=oldest&limit=30`);
+      assert.equal(oldest.status, 200);
+      assert.notEqual((await oldest.json()).items[0].title, "Supplier Relationship Manager");
+      } finally {
+        await db.job.deleteMany({ where: { sourceId: source.id, externalId: { startsWith: "ranking-" } } });
+      }
+    });
+
     await t.test(
       "failed or duplicate snapshots never advance absence tracking",
       async () => {

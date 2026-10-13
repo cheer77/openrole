@@ -5,8 +5,10 @@ export function apiJobsQuery(filters: Filters): URLSearchParams {
   const params = new URLSearchParams({
     page: String(filters.page),
     limit: String(PAGE_SIZE),
-    sort: filters.sort,
   });
+  // The API defaults searched jobs to relevance. Omitting it also lets an older
+  // API serve search during a staggered frontend/backend deployment.
+  if (filters.sort !== "relevance") params.set("sort", filters.sort);
   const fields = {
     search: filters.q,
     category: filters.category,

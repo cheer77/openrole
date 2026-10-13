@@ -105,7 +105,7 @@ export default async function Home() {
 							<Icon name='arrow' size={19} />
 						</div>
 					</Link> */}
-					<SearchBar action='/jobs' inputType='search' />
+					<SearchBar action='/jobs' />
 					<nav className='home-quick-links' aria-label='Popular searches'>
 						{quickSearches.map((item) => (
 							<Link href={item.href} key={item.label}>

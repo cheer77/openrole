@@ -7,6 +7,7 @@ import {
 } from "../src/providers/providers.js";
 import { normalize, plainText, sourceBodyHtml } from "../src/providers/normalize.js";
 import { jobsQuery } from "../src/jobs-query.js";
+import { normalizeSearch } from "../src/search-ranking.js";
 import { jobSlug } from "../src/sync.js";
 
 const raw = {
@@ -267,6 +268,15 @@ test("query validation bounds pagination and uses one currency for salary compar
   assert.deepEqual(result.where.sortDate, {
     gte: new Date("2026-01-01T00:00:00Z"),
   });
+});
+
+test("search normalization and default sort retain explicit user ordering", () => {
+  assert.deepEqual(normalizeSearch("  Supplier,  Relationship   Manager! "), {
+    phrase: "supplier relationship manager", tokens: ["supplier", "relationship", "manager"],
+  });
+  assert.equal(jobsQuery({ search: "Nurse" }).query.sort, "relevance");
+  assert.equal(jobsQuery({ search: "Nurse", sort: "oldest" }).query.sort, "oldest");
+  assert.equal(jobsQuery({}).query.sort, "newest");
 });
 
 test("job slugs separate sources and remain deterministic", () => {

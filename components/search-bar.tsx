@@ -10,13 +10,12 @@ type SearchValues = { q: string; location: string; workType: string };
 
 type Props = {
 	action?: string;
-	inputType?: 'text' | 'search';
 	initialValues?: SearchValues;
 	formRef?: Ref<HTMLFormElement>;
 	onSubmit?: FormEventHandler<HTMLFormElement>;
 };
 
-export function SearchBar({ action, inputType = 'text', initialValues, formRef, onSubmit }: Props) {
+export function SearchBar({ action, initialValues, formRef, onSubmit }: Props) {
 	return (
 		<form
 			ref={formRef}
@@ -32,7 +31,7 @@ export function SearchBar({ action, inputType = 'text', initialValues, formRef, 
 				<input
 					key={initialValues?.q}
 					name='q'
-					type={inputType}
+					type='search'
 					defaultValue={initialValues?.q}
 					placeholder='Job title, company, or keyword'
 					maxLength={150}

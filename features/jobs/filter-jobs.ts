@@ -11,6 +11,7 @@ import {
 } from "./types.ts";
 export const PAGE_SIZE = 9;
 export const sortOptions = [
+	["relevance", "Most relevant"],
   ["newest", "Newest first"],
   ["oldest", "Oldest first"],
   ["salary-high", "Salary: high to low"],
@@ -27,11 +28,12 @@ const valid = (value: string | null, options: readonly string[]) =>
 const amount = (value: string | null) =>
   value && /^\d{1,9}$/.test(value) && Number(value) <= 100000000 ? String(Number(value)) : "";
 export function parseFilters(params: URLSearchParams): Filters {
-  const sort =
+  const selectedSort =
     valid(
       params.get("sort"),
       sortOptions.map(([value]) => value),
-    ) || "newest";
+    ) || ((params.get("q") || "").trim() ? "relevance" : "newest");
+  const sort = selectedSort === "relevance" && !(params.get("q") || "").trim() ? "newest" : selectedSort;
   const salaryMin = amount(params.get("salaryMin"));
   const salaryMax = amount(params.get("salaryMax"));
   const category = valid(params.get("category"), categories);
@@ -73,7 +75,7 @@ export function serializeFilters(filters: Filters): URLSearchParams {
       (value as string[]).forEach((tech) => params.append("tech", tech));
     else if (
       value &&
-      !(key === "sort" && value === "newest") &&
+      !(key === "sort" && ((value === "newest" && !filters.q) || (value === "relevance" && filters.q))) &&
       !(key === "page" && value === 1)
     )
       params.set(key, String(value));

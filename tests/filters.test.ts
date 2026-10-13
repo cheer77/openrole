@@ -26,6 +26,16 @@ test("invalid URL input is normalized to API limits", () => {
   assert.equal(filters.sort, "newest");
   assert.deepEqual(filters.tech, ["React"]);
 });
+test("search defaults to relevance and preserves an explicit date sort", () => {
+  const ranked = parseFilters(new URLSearchParams("q=Supplier+Relationship+Manager"));
+  assert.equal(ranked.sort, "relevance");
+  assert.equal(apiJobsQuery(ranked).has("sort"), false);
+  assert.equal(parseFilters(serializeFilters(ranked)).sort, "relevance");
+  const dated = parseFilters(new URLSearchParams("q=Supplier&sort=newest"));
+  assert.equal(dated.sort, "newest");
+  assert.equal(serializeFilters(dated).get("sort"), "newest");
+  assert.equal(apiJobsQuery(dated).get("sort"), "newest");
+});
 test("technology filters apply only to technical job categories", () => {
   assert.equal(supportsTechnologyFilter(""), true);
   assert.equal(supportsTechnologyFilter("Frontend"), true);

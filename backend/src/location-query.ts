@@ -29,7 +29,7 @@ const eu = [
   "ES",
   "SE",
 ];
-const names: Record<string, string[]> = {
+export const locationNames: Record<string, string[]> = {
   Spain: ["Spain"],
   Germany: ["Germany"],
   UK: ["United Kingdom", "UK"],
@@ -38,7 +38,7 @@ const names: Record<string, string[]> = {
   EU: ["European Union", "EU"],
   Europe: ["Europe", "European Union", "EU"],
 };
-const codes: Record<string, string[]> = {
+export const locationCodes: Record<string, string[]> = {
   Spain: ["ES"],
   Germany: ["DE"],
   UK: ["GB", "UK"],
@@ -70,10 +70,10 @@ export function locationWhere(location: string): Prisma.JobWhereInput {
         ),
       },
     };
-  const aliases = names[location] ?? [location];
+  const aliases = locationNames[location] ?? [location];
   return {
     OR: [
-      ...(codes[location] ?? []).map((code) => ({
+      ...(locationCodes[location] ?? []).map((code) => ({
         country: { not: null, equals: code, mode: "insensitive" as const },
       })),
       ...aliases.flatMap((name) => [

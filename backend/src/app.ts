@@ -22,6 +22,7 @@ import { NestFactory } from "@nestjs/core";
 import { ZodError, z } from "zod";
 import { Database } from "./db.js";
 import { jobsQuery } from "./jobs-query.js";
+import { normalizeSearch, rankedJobsSql, type RankedJob } from "./search-ranking.js";
 import { config } from "./config.js";
 import { SeoController } from "./seo.js";
 import { ControlCenterController, PublicIntegrationsController } from "./control-center.js";
@@ -57,6 +58,26 @@ class ApiController {
       throw error;
     }
     const { query, where, orderBy, currency } = filters;
+    if (query.search && normalizeSearch(query.search).tokens.length) {
+      const ranked = await this.database.client.$queryRaw<RankedJob[]>(rankedJobsSql(filters));
+      if (process.env.NODE_ENV === "development" && process.env.SEARCH_DEBUG === "1") {
+        console.debug("Search ranking", query.search, ranked.filter((row) => row.id).map((row) => ({
+          jobId: row.id, totalScore: row.score, exactTitle: row.exactTitle,
+          titleTokenMatches: row.titleTokenMatches, phraseSimilarity: row.phraseSimilarity,
+          descriptionMatches: row.descriptionMatches,
+        })));
+      }
+      const total = Number(ranked[0]?.total ?? 0);
+      const ids = ranked.flatMap((row) => row.id ? [row.id] : []);
+      const jobs = await this.database.client.job.findMany({
+        where: { id: { in: ids } },
+        omit: { description: true, descriptionHtml: true, missingSince: true },
+        include: { company: true },
+      });
+      const byId = new Map(jobs.map((job) => [job.id, job]));
+      return { items: ids.flatMap((id) => { const job = byId.get(id); return job ? [job] : []; }), total,
+        page: query.page, limit: query.limit, pages: Math.ceil(total / query.limit), currency };
+    }
     const [total, items] = await this.database.client.$transaction(
       [
         this.database.client.job.count({ where }),
