@@ -1,16 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Job } from "@/features/jobs/types";
 export function CompanyLogo({
   company,
   large = false,
+  eager = false,
 }: {
   company: Job["company"];
   large?: boolean;
+  eager?: boolean;
 }) {
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
   const [loadedUrl, setLoadedUrl] = useState<string | null>(null);
+  const imageRef = useRef<HTMLImageElement>(null);
+  useEffect(() => {
+    const image = imageRef.current;
+    if (!image || !company.logoUrl || !image.complete) return;
+    if (image.naturalWidth > 0) setLoadedUrl(company.logoUrl);
+    else setFailedUrl(company.logoUrl);
+  }, [company.logoUrl]);
   const hasCandidate =
     Boolean(company.logoUrl) && company.logoUrl !== failedUrl;
   const showLogo = hasCandidate && company.logoUrl === loadedUrl;
@@ -30,10 +39,11 @@ export function CompanyLogo({
         // fixed next/image remote allowlist would prevent new company logos.
         // eslint-disable-next-line @next/next/no-img-element
         <img
+          ref={imageRef}
           className={showLogo ? "company-logo-image-loaded" : ""}
           src={company.logoUrl!}
           alt=""
-          loading="lazy"
+          loading={eager ? "eager" : "lazy"}
           decoding="async"
           referrerPolicy="no-referrer"
           onLoad={(event) => {

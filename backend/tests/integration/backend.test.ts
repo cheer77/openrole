@@ -179,6 +179,41 @@ test("PostgreSQL synchronization and API regression", async (t) => {
       }
     });
 
+    await t.test("company catalog searches globally and sorts active counts before pagination", async () => {
+      const names = ["Alpha", "Beta"];
+      const companies = await Promise.all(names.map((name) => db.company.create({
+        data: { name: `Catalog ${uid} ${name}`, slug: `catalog-${uid}-${name.toLowerCase()}` },
+      })));
+      const sources = await Promise.all(companies.map((item, index) => db.source.create({
+        data: { name: `Catalog board ${index}`, type: "ASHBY", sourceIdentifier: `catalog-${uid}-${index}`, companyId: item.id, enabled: true },
+      })));
+      try {
+        await db.job.createMany({ data: [0, 1, 2].map((index) => ({
+          externalId: `catalog-${index}`, slug: `catalog-${uid}-${index}`,
+          title: `Catalog role ${index}`, companyId: companies[index === 0 ? 0 : 1].id,
+          sourceId: sources[index === 0 ? 0 : 1].id, description: "A vacancy", shortDescription: "A vacancy",
+          category: "Other", location: "Madrid", sourceUrl: `https://example.com/catalog-${index}`,
+          applyUrl: `https://example.com/catalog-${index}`, lastCheckedAt: new Date(), sortDate: new Date(),
+        })) });
+        const query = async (sort: string, page = 1) => {
+          const response = await fetch(`${base}/companies?search=${encodeURIComponent(`catalog ${uid}`)}&sort=${sort}&limit=1&page=${page}`);
+          assert.equal(response.status, 200);
+          return response.json();
+        };
+        const featured = await query("featured");
+        assert.equal(featured.total, 2);
+        assert.equal(featured.items[0].name, `Catalog ${uid} Beta`);
+        assert.equal(featured.items[0]._count.jobs, 2);
+        assert.equal((await query("featured", 2)).items[0].name, `Catalog ${uid} Alpha`);
+        assert.equal((await query("name")).items[0].name, `Catalog ${uid} Alpha`);
+        assert.equal((await query("nameDesc")).items[0].name, `Catalog ${uid} Beta`);
+      } finally {
+        await db.job.deleteMany({ where: { companyId: { in: companies.map((item) => item.id) } } });
+        await db.source.deleteMany({ where: { id: { in: sources.map((item) => item.id) } } });
+        await db.company.deleteMany({ where: { id: { in: companies.map((item) => item.id) } } });
+      }
+    });
+
     await t.test(
       "failed or duplicate snapshots never advance absence tracking",
       async () => {

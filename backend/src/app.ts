@@ -20,6 +20,7 @@ import {
 } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { ZodError, z } from "zod";
+import { Prisma } from "./generated/prisma/client.js";
 import { Database } from "./db.js";
 import { jobsQuery } from "./jobs-query.js";
 import { normalizeSearch, rankedJobsSql, type RankedJob } from "./search-ranking.js";
@@ -194,7 +195,7 @@ class ApiController {
         page: z.coerce.number().int().min(1).max(10000).default(1),
         limit: z.coerce.number().int().min(1).max(100).default(20),
         search: z.string().trim().max(150).optional(),
-        sort: z.enum(["name", "activeJobs"]).default("name"),
+        sort: z.enum(["name", "nameDesc", "activeJobs", "featured"]).default("name"),
       })
       .strict()
       .safeParse(input);
@@ -207,6 +208,36 @@ class ApiController {
         ? { name: { contains: search, mode: "insensitive" as const } }
         : {}),
     };
+    if (sort === "featured") {
+      // Explicit employers observed in our source registry; only active, enabled jobs rank.
+      const featuredSlugs = ["stripe", "datadog", "hellofresh", "cloudflare", "wise", "mongodb", "gitlab", "adyen", "spotify", "deliveroo", "wolt", "n26"];
+      const matched = search ? Prisma.sql`AND c."name" ILIKE ${`%${search.replace(/[\\%_]/g, "\\$&")}%`}` : Prisma.empty;
+      const rows = await this.database.client.$queryRaw<Array<{ id: string | null; jobs: bigint | null; total: bigint }>>(Prisma.sql`
+        WITH ranked AS (
+          SELECT c."id", c."name", c."slug", count(j."id") AS jobs
+          FROM "Company" c
+          JOIN "Job" j ON j."companyId" = c."id" AND j."status" = 'ACTIVE'
+          JOIN "Source" s ON s."id" = j."sourceId" AND s."enabled" = true
+          WHERE c."enabled" = true ${matched}
+          GROUP BY c."id"
+        ), counted AS (SELECT count(*) AS total FROM ranked), page AS (
+          SELECT "id", jobs FROM ranked
+          ORDER BY CASE WHEN "slug" IN (${Prisma.join(featuredSlugs)}) THEN 0 ELSE 1 END,
+            jobs DESC, "name" ASC, "id" ASC
+          LIMIT ${limit} OFFSET ${(page - 1) * limit}
+        )
+        SELECT page."id", page.jobs, counted.total FROM counted LEFT JOIN page ON true
+      `);
+      const total = Number(rows[0]?.total ?? 0);
+      const ids = rows.flatMap((row) => row.id ? [row.id] : []);
+      const companies = await this.database.client.company.findMany({ where: { id: { in: ids } } });
+      const byId = new Map(companies.map((company) => [company.id, company]));
+      const items = rows.flatMap((row) => {
+        const company = row.id ? byId.get(row.id) : null;
+        return company ? [{ ...company, _count: { jobs: Number(row.jobs) } }] : [];
+      });
+      return { items, total, page, limit, pages: Math.ceil(total / limit) };
+    }
     if (sort === "activeJobs") {
       const [total, ranked] = await this.database.client.$transaction(
         [
@@ -241,7 +272,7 @@ class ApiController {
         this.database.client.company.count({ where }),
         this.database.client.company.findMany({
           where,
-          orderBy: [{ name: "asc" }, { id: "asc" }],
+          orderBy: [{ name: sort === "nameDesc" ? "desc" : "asc" }, { id: "asc" }],
           skip: (page - 1) * limit,
           take: limit,
           include: {
