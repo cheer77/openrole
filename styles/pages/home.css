@@ -61,15 +61,35 @@
 .home-hero-facts {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 11px 25px;
+	gap: 10px 26px;
 	margin-top: 25px;
-	color: #292038;
-	font-size: 13px;
+	color: rgb(255 255 255 / 78%);
+	font-size: 12px;
+	font-weight: 550;
+	line-height: 1.25;
+}
+.home-hero-facts > span {
+	display: inline-flex;
+	align-items: baseline;
+	gap: 6px;
 }
 .home-hero-facts strong {
-	color: #292038;
-	font-size: 16px;
-	font-weight: 750;
+	color: #fff;
+	font-size: 21px;
+	font-weight: 700;
+	letter-spacing: -0.025em;
+	line-height: 1;
+}
+.hero-graphic {
+	width: 115%;
+	max-width: 380px;
+	justify-self: center;
+	transform: translateY(12px);
+}
+.hero-graphic img {
+	display: block;
+	width: 100%;
+	height: auto;
 }
 .home-hero-card {
 	position: relative;
@@ -382,6 +402,9 @@
 	.home-hero-card {
 		min-height: 220px;
 	}
+	.hero-graphic {
+		max-width: 311px;
+	}
 	.home-featured-grid {
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 	}
@@ -391,7 +414,8 @@
 		grid-template-columns: minmax(0, 1fr);
 		padding-top: 48px;
 	}
-	.home-hero-card {
+	.home-hero-card,
+	.hero-graphic {
 		display: none;
 	}
 	.home-company-grid {
@@ -420,10 +444,10 @@
 	.home-hero-facts {
 		gap: 8px 16px;
 		margin-top: 20px;
-		font-size: 12px;
+		font-size: 11px;
 	}
 	.home-hero-facts strong {
-		font-size: 14px;
+		font-size: 18px;
 	}
 	.home-quick-links {
 		flex-wrap: nowrap;

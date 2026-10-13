@@ -8,6 +8,7 @@ import { SearchBar } from '@/components/search-bar';
 import { getJobs, getCompanies, companyPresentation } from '@/lib/api';
 import { workTypes, type Category } from '@/features/jobs/types';
 import { formatSalary, locationLabel, timeAgo } from '@/lib/format';
+import Image from 'next/image';
 
 export const metadata: Metadata = {
 	title: 'Discover your next role',
@@ -25,9 +26,16 @@ const quickSearches = [
 ];
 const regions = ['Worldwide', 'Europe', 'Spain', 'UK', 'USA'] as const;
 const homeCategories = [
-	'Software Engineering', 'Sales', 'Marketing', 'Engineering',
-	'Construction & Trades', 'Manufacturing & Production',
-	'Logistics & Supply Chain', 'Healthcare', 'Retail & Hospitality', 'Finance & Accounting',
+	'Software Engineering',
+	'Sales',
+	'Marketing',
+	'Engineering',
+	'Construction & Trades',
+	'Manufacturing & Production',
+	'Logistics & Supply Chain',
+	'Healthcare',
+	'Retail & Hospitality',
+	'Finance & Accounting',
 ] as const satisfies readonly Category[];
 
 export default async function Home() {
@@ -67,7 +75,19 @@ export default async function Home() {
 							</span>
 						</div>
 					</div>
-					<Link className='home-hero-card' href='/jobs'>
+
+					<div className='hero-graphic'>
+						<Image
+							src='/graphic-hero.webp'
+							alt='Hero graphic'
+							width={800}
+							height={600}
+							sizes='(max-width: 900px) 1px, (max-width: 1150px) 311px, 380px'
+							priority
+						/>
+					</div>
+
+					{/* <Link className='home-hero-card' href='/jobs'>
 						<div className='home-hero-card-top'>
 							<span className='home-hero-orbit'>
 								<Icon name='sparkle' size={22} />
@@ -79,7 +99,7 @@ export default async function Home() {
 							<span>Explore roles</span>
 							<Icon name='arrow' size={19} />
 						</div>
-					</Link>
+					</Link> */}
 					<SearchBar action='/jobs' inputType='search' />
 					<nav className='home-quick-links' aria-label='Popular searches'>
 						{quickSearches.map((item) => (
