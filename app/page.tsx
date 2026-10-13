@@ -189,7 +189,10 @@ export default async function Home() {
 					</div>
 					<div className='home-explore-grid'>
 						<div className='home-explore-panel'>
-							<h3>By discipline</h3>
+							<div className='home-explore-title'>
+								<span className='home-explore-icon'><Icon name='layers3' size={20} strokeWidth={1.8} /></span>
+								<h3>By discipline</h3>
+							</div>
 							<p>Find roles shaped around your strengths.</p>
 							<div className='home-explore-chips'>
 								{homeCategories.map((category) => (
@@ -200,7 +203,10 @@ export default async function Home() {
 							</div>
 						</div>
 						<div className='home-explore-panel'>
-							<h3>By place and pace</h3>
+							<div className='home-explore-title'>
+								<span className='home-explore-icon'><Icon name='globe2' size={20} strokeWidth={1.8} /></span>
+								<h3>By place and pace</h3>
+							</div>
 							<p>Choose where and how you want to work.</p>
 							<div className='home-explore-chips'>
 								{workTypes.map((type) => (
