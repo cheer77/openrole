@@ -512,6 +512,10 @@
 .job-list-grid > .result-job-card {
 	padding: 15px;
 }
+.job-card-grid {
+	display: flex;
+	flex-direction: column;
+}
 .job-card-grid h3 {
 	font-size: 17px;
 	margin-top: 11px;
