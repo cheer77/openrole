@@ -90,16 +90,46 @@ export function SiteFooter({ version }: { version: string }) {
 	if (pathname.startsWith('/admin')) return null;
 	return (
 		<footer className='site-footer'>
-			<div className='container footer-inner'>
-				<Link href='/' className='brand footer-brand' aria-label='vmiyou home'>
-					<BrandLogo />
-				</Link>
-				<p>Jobs across every industry</p>
-				<nav aria-label='Footer navigation'>
-					<Link href='/jobs'>Find Jobs</Link>
-					<Link href='/companies'>Companies</Link>
-					<Link href='/privacy'>Privacy</Link>
+			<div className='container footer-main'>
+				<div className='footer-brand-column'>
+					<Link href='/' className='brand footer-brand' aria-label='vmiyou home'>
+						<BrandLogo />
+					</Link>
+					<p className='footer-tagline'>Jobs across every industry</p>
+					<p className='footer-description'>
+						Explore job opportunities directly from company career pages.
+					</p>
+					<div className='footer-socials' aria-label='Social networks coming soon'>
+						<span className='footer-social-placeholder' role='img' aria-label='LinkedIn — coming soon' title='LinkedIn — coming soon'>
+							<Icon name='linkedin' size={17} strokeWidth={1.8} />
+						</span>
+						<span className='footer-social-placeholder' role='img' aria-label='X — coming soon' title='X — coming soon'>
+							<Icon name='xSocial' size={16} strokeWidth={1.8} />
+						</span>
+						<span className='footer-social-placeholder' role='img' aria-label='Instagram — coming soon' title='Instagram — coming soon'>
+							<Icon name='instagram' size={17} strokeWidth={1.8} />
+						</span>
+						<span className='footer-social-placeholder' role='img' aria-label='YouTube — coming soon' title='YouTube — coming soon'>
+							<Icon name='youtube' size={18} strokeWidth={1.8} />
+						</span>
+					</div>
+				</div>
+				<nav className='footer-navigation' aria-label='Footer navigation'>
+					<div className='footer-nav-group'>
+						<h2>Discover</h2>
+						<Link href='/jobs'>Find Jobs</Link>
+						<Link href='/companies'>Companies</Link>
+						<Link href='/remote-jobs'>Remote Jobs</Link>
+						<Link href='/jobs?experience=Junior'>Junior Roles</Link>
+					</div>
+					<div className='footer-nav-group'>
+						<h2>Company</h2>
+						<Link href='/privacy'>Privacy</Link>
+					</div>
 				</nav>
+			</div>
+			<div className='container footer-bottom'>
+				<small>© 2026 Vmiyou. All rights reserved.</small>
 				<small className='footer-version'>v{version}</small>
 			</div>
 		</footer>
