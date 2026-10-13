@@ -270,14 +270,14 @@
 	padding: 13px;
 	border: 1px solid var(--border);
 	border-radius: 12px;
-	background: #f7fbf9;
+	background: var(--surface-company-mint);
 	transition:
 		transform 0.18s,
 		border-color 0.18s,
 		box-shadow 0.18s;
 }
 .home-company-card[data-company-tone='1'] {
-	background: #f7f8fd;
+	background: var(--surface-company-lilac);
 }
 .home-company-card:hover {
 	transform: translateY(-2px);
@@ -321,7 +321,7 @@
 	padding: 20px;
 	border: 1px solid var(--border);
 	border-radius: 12px;
-	background: var(--surface, #fff);
+	background: var(--surface);
 }
 .home-explore-title {
 	display: flex;
@@ -361,8 +361,8 @@
 	padding: 8px 13px;
 	border: 1px solid var(--border);
 	border-radius: 999px;
-	background: #fff;
-	color: #435069;
+	background: var(--surface);
+	color: var(--text-chip);
 	transition:
 		background-color 200ms ease,
 		border-color 200ms ease,

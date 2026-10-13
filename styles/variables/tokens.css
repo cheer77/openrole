@@ -6,8 +6,13 @@
 	--focus-ring: #a43640;
 	--text: #172035;
 	--text-secondary: #566176;
+	--text-muted: #667085;
+	--text-chip: #435069;
 	--background: #ffffff;
 	--surface: #ffffff;
+	--surface-subtle: #f8fafc;
+	--surface-company-mint: #f7fbf9;
+	--surface-company-lilac: #f7f8fd;
 	--border: #dce1e9;
 	--border-strong: #bcc5d4;
 	--success: #177345;
