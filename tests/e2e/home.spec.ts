@@ -33,7 +33,7 @@ test("home discovery links use real jobs and company routes", async ({
   page,
 }) => {
   await page.goto("/");
-  await expect(page.locator(".home-job-card")).toHaveCount(4);
+  await expect(page.locator(".home-featured-grid > .result-job-card")).toHaveCount(4);
   await expect(page.locator(".home-company-card")).toHaveCount(8);
   await page.locator(".home-company-card").first().click();
   await expect(page).toHaveURL(/\/companies\/[a-z0-9-]+$/);

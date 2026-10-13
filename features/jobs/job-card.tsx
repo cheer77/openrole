@@ -10,11 +10,13 @@ export function JobCard({
   now,
   returnQuery = "",
   variant = "legacy",
+  showDescription = true,
 }: {
   job: Job;
   now: number;
   returnQuery?: string;
   variant?: "legacy" | "list" | "grid";
+  showDescription?: boolean;
 }) {
   const fresh = now - new Date(job.publishedAt || job.firstSeenAt).getTime() < 86400000;
   const href = `/jobs/${job.slug}${returnQuery ? `?from=${encodeURIComponent(returnQuery)}` : ""}`;
@@ -23,7 +25,7 @@ export function JobCard({
     for (const character of job.id) tone = (tone * 31 + character.charCodeAt(0)) >>> 0;
     return (
       <article
-        className={`job-card result-job-card ${variant === "grid" ? "job-card-grid" : "job-card-list"}`}
+        className={`job-card result-job-card job-title-hover-surface ${variant === "grid" ? "job-card-grid" : "job-card-list"}`}
         data-job-id={job.id}
         data-job-tone={tone % 2}
       >
@@ -55,7 +57,7 @@ export function JobCard({
             </time>
           )}
         </div>
-        {job.shortDescription && <p className="job-preview result-card-preview">{job.shortDescription}</p>}
+        {showDescription && job.shortDescription && <p className="job-preview result-card-preview">{job.shortDescription}</p>}
         <div className="job-card-bottom result-card-bottom">
           <div className={`card-salary ${!job.salary ? "salary-unlisted" : ""}`}>
             <Icon name="wallet" size={17} strokeWidth={1.8} />

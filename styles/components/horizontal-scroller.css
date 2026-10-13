@@ -1,0 +1,60 @@
+.horizontal-scroller {
+	overflow-x: auto;
+	overscroll-behavior-inline: contain;
+	-webkit-overflow-scrolling: touch;
+	scrollbar-width: none;
+}
+.horizontal-scroller::-webkit-scrollbar {
+	display: none;
+}
+.horizontal-scroller.can-scroll {
+	cursor: grab;
+}
+.horizontal-scroller.is-dragging {
+	cursor: grabbing;
+	scroll-behavior: auto;
+	scroll-snap-type: none;
+	user-select: none;
+}
+.horizontal-scroll-feedback {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin-top: 7px;
+}
+.horizontal-scroll-feedback[hidden] {
+	display: none;
+}
+.horizontal-scroll-hint {
+	flex: none;
+	color: var(--text-secondary);
+	font-size: 11px;
+	font-weight: 650;
+	white-space: nowrap;
+}
+.horizontal-scroll-hint-touch {
+	display: none;
+}
+.horizontal-scroll-track {
+	position: relative;
+	flex: 1 1 auto;
+	height: 4px;
+	overflow: hidden;
+	border-radius: 999px;
+	background: var(--border-strong);
+}
+.horizontal-scroll-thumb {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	border-radius: inherit;
+	background: var(--brand);
+}
+@media (pointer: coarse) {
+	.horizontal-scroll-hint-touch {
+		display: inline;
+	}
+	.horizontal-scroll-hint-mouse {
+		display: none;
+	}
+}

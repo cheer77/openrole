@@ -16,6 +16,7 @@ import "@/styles/components/badges.css";
 import "@/styles/components/company-logo.css";
 import "@/styles/components/header.css";
 import "@/styles/components/search.css";
+import "@/styles/components/horizontal-scroller.css";
 import "@/styles/components/filters.css";
 import "@/styles/components/job-card.css";
 import "@/styles/components/pagination.css";

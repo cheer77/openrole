@@ -5,9 +5,10 @@ import { connection } from 'next/server';
 import { CompanyLogo } from '@/components/company-logo';
 import { Icon } from '@/components/icon';
 import { SearchBar } from '@/components/search-bar';
+import { HorizontalScroller } from '@/components/horizontal-scroller';
 import { getJobs, getCompanies, companyPresentation } from '@/lib/api';
 import { workTypes, type Category } from '@/features/jobs/types';
-import { formatSalary, locationLabel, timeAgo } from '@/lib/format';
+import { JobCard } from '@/features/jobs/job-card';
 import Image from 'next/image';
 
 export const metadata: Metadata = {
@@ -125,34 +126,19 @@ export default async function Home() {
 					{featured.length === 0 && (
 						<p className='empty-state'>No open roles yet. Please check back soon.</p>
 					)}
-					<div className='home-featured-grid'>
+					<HorizontalScroller
+						className='home-featured-grid job-list-grid'
+						label='Fresh opportunities'>
 						{featured.map((job) => (
-							<article className='home-job-card' key={job.id}>
-								<div className='home-job-card-top'>
-									<CompanyLogo company={job.company} />
-									<span className='home-job-fresh'>
-										{!job.publishedAt && 'Added '}
-										{timeAgo(job.publishedAt || job.firstSeenAt, now)}
-									</span>
-								</div>
-								<h3>
-									<Link href={`/jobs/${job.slug}`}>{job.title}</Link>
-								</h3>
-								<p className='home-job-company'>{job.company.name}</p>
-								<p className='home-job-pay'>{formatSalary(job.salary)}</p>
-								<div className='home-job-card-bottom'>
-									<span>
-										{job.workType} · {locationLabel(job)}
-									</span>
-									<Link
-										href={`/jobs/${job.slug}`}
-										aria-label={`View ${job.title} at ${job.company.name}`}>
-										<Icon name='arrow' size={17} />
-									</Link>
-								</div>
-							</article>
+							<JobCard
+								key={job.id}
+								job={job}
+								now={now}
+								variant='grid'
+								showDescription={false}
+							/>
 						))}
-					</div>
+					</HorizontalScroller>
 				</section>
 
 				<section className='home-section' aria-labelledby='companies-heading'>
