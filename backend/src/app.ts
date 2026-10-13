@@ -173,11 +173,12 @@ class ApiController {
         page: z.coerce.number().int().min(1).max(10000).default(1),
         limit: z.coerce.number().int().min(1).max(100).default(20),
         search: z.string().trim().max(150).optional(),
+        sort: z.enum(["name", "activeJobs"]).default("name"),
       })
       .strict()
       .safeParse(input);
     if (!parsed.success) throw new BadRequestException("Invalid company query");
-    const { page, limit, search } = parsed.data;
+    const { page, limit, search, sort } = parsed.data;
     const where = {
       enabled: true,
       jobs: { some: { status: "ACTIVE" as const, source: { enabled: true } } },
@@ -185,6 +186,35 @@ class ApiController {
         ? { name: { contains: search, mode: "insensitive" as const } }
         : {}),
     };
+    if (sort === "activeJobs") {
+      const [total, ranked] = await this.database.client.$transaction(
+        [
+          this.database.client.company.count({ where }),
+          this.database.client.job.groupBy({
+            by: ["companyId"],
+            where: {
+              status: "ACTIVE",
+              company: { enabled: true, ...(search ? { name: { contains: search, mode: "insensitive" } } : {}) },
+              source: { enabled: true },
+            },
+            _count: { _all: true },
+            orderBy: [{ _count: { companyId: "desc" } }, { companyId: "asc" }],
+            skip: (page - 1) * limit,
+            take: limit,
+          }),
+        ],
+        { isolationLevel: "RepeatableRead" },
+      );
+      const companies = await this.database.client.company.findMany({
+        where: { id: { in: ranked.map((item) => item.companyId) } },
+      });
+      const byId = new Map(companies.map((company) => [company.id, company]));
+      const items = ranked.flatMap((item) => {
+        const company = byId.get(item.companyId);
+        return company ? [{ ...company, _count: { jobs: item._count._all } }] : [];
+      });
+      return { items, total, page, limit, pages: Math.ceil(total / limit) };
+    }
     const [total, items] = await this.database.client.$transaction(
       [
         this.database.client.company.count({ where }),

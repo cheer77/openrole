@@ -43,12 +43,16 @@ export default async function Home() {
 	await connection();
 	const [listings, companyPage, remote] = await Promise.all([
 		getJobs(new URLSearchParams({ limit: '4' })),
-		getCompanies(new URLSearchParams({ limit: '8' })),
+		getCompanies(new URLSearchParams({ limit: '8', sort: 'activeJobs' })),
 		getJobs(new URLSearchParams({ limit: '1', remoteType: 'REMOTE' })),
 	]);
 	const now = requestTime();
 	const featured = listings.items;
-	const companies = companyPage.items.map(companyPresentation);
+	const companies = companyPage.items.map((company) => ({
+		...companyPresentation(company),
+		activeJobs: company._count?.jobs ?? 0,
+		tone: [...company.id].reduce((value, character) => value + character.charCodeAt(0), 0) % 2,
+	}));
 	const remoteCount = remote.total;
 
 	return (
@@ -145,7 +149,8 @@ export default async function Home() {
 					<div className='home-section-heading'>
 						<div>
 							<span className='home-section-kicker'>The people behind the roles</span>
-							<h2 id='companies-heading'>Explore companies</h2>
+							<h2 id='companies-heading'>Companies hiring now</h2>
+							<p className='home-section-subtitle'>Explore employers with active opportunities.</p>
 						</div>
 						<Link className='home-section-link' href='/companies'>
 							All companies <Icon name='arrow' size={17} />
@@ -156,18 +161,23 @@ export default async function Home() {
 							Companies will appear here when their career boards are connected.
 						</p>
 					)}
-					<div className='home-company-grid'>
-						{companies.slice(0, 8).map((company) => (
+					<HorizontalScroller className='home-company-grid' label='Companies hiring now'>
+						{companies.map((company) => (
 							<Link
 								className='home-company-card'
 								href={`/companies/${company.slug}`}
-								key={company.name}
+								key={company.slug}
+								data-company-tone={company.tone}
 								aria-label={`View jobs at ${company.name}`}>
 								<CompanyLogo company={company} />
-								<span>{company.name}</span>
+								<span className='home-company-copy'>
+									<strong>{company.name}</strong>
+									<span>{company.activeJobs} open jobs</span>
+								</span>
+								<Icon name='arrowUpRight' size={17} strokeWidth={1.8} />
 							</Link>
 						))}
-					</div>
+					</HorizontalScroller>
 				</section>
 
 				<section className='home-section home-explore' aria-labelledby='explore-heading'>
