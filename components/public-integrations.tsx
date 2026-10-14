@@ -4,29 +4,20 @@ import { usePathname } from "next/navigation";
 import Script from "next/script";
 import { trackingDisabled } from "@/lib/analytics-client";
 
-type Integration = { provider: string; identifier: string };
-const patterns: Record<string, RegExp> = {
-  ga4: /^G-[A-Z0-9]{4,20}$/,
-  gtm: /^GTM-[A-Z0-9]{4,20}$/,
-  meta: /^\d{8,20}$/,
-  clarity: /^[a-z0-9]{5,32}$/i,
-};
+import type { PublicIntegration } from "@/lib/public-integrations";
+import { loadPublicIntegrations } from "@/lib/public-integrations-client";
+
 export function PublicIntegrations() {
   const path = usePathname();
-  const [items, setItems] = useState<Integration[]>([]);
+  const [items, setItems] = useState<PublicIntegration[]>([]);
   useEffect(() => {
     if (path.startsWith("/admin") || path.startsWith("/login") || path.startsWith("/register") || trackingDisabled()) return;
-    const controller = new AbortController();
-    void fetch("/api/integrations", { signal: controller.signal, cache: "no-store" })
-      .then((response) => response.ok ? response.json() : [])
-      .then((rows: unknown) => {
-        if (!Array.isArray(rows)) return;
-        setItems(rows.filter((row): row is Integration =>
-          !!row && typeof row === "object" &&
-          typeof row.provider === "string" && typeof row.identifier === "string" &&
-          !!patterns[row.provider]?.test(row.identifier)));
-      }).catch(() => {});
-    return () => controller.abort();
+    let active = true;
+    // Navigation cancels this subscription, not the shared in-flight request.
+    void loadPublicIntegrations()
+      .then((rows) => { if (active) setItems(rows); })
+      .catch(() => {});
+    return () => { active = false; };
   }, [path]);
   if (path.startsWith("/admin") || path.startsWith("/login") || path.startsWith("/register") || trackingDisabled()) return null;
   const byProvider = Object.fromEntries(items.map((item) => [item.provider, item.identifier]));

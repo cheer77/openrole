@@ -77,7 +77,7 @@ export function ResultJobTitle({ href, title }: { href: string; title: string })
 
 	return (
 		<h3 ref={headingRef}>
-			<Link href={href} className='card-title-link' title={title}>
+			<Link href={href} prefetch={false} className='card-title-link' title={title}>
 				<span ref={textRef}>{title}</span>
 			</Link>
 			<span className='job-title-lines' aria-hidden='true'>

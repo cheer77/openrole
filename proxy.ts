@@ -25,4 +25,14 @@ export async function proxy(request: NextRequest) {
   return NextResponse.next();
 }
 
-export const config = { matcher: "/jobs/:slug" };
+// Match before Next.js strips internal prefetch headers from the Proxy request.
+// Ordinary document and RSC navigations still need the 404/410 status check.
+export const config = {
+  matcher: [{
+    source: "/jobs/:slug",
+    missing: [
+      { type: "header", key: "next-router-prefetch" },
+      { type: "header", key: "purpose", value: "prefetch" },
+    ],
+  }],
+};

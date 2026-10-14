@@ -73,7 +73,7 @@ export function JobCard({
             </time>
           )}
           <Link
-            href={href}
+            href={href} prefetch={false}
             className="view-job"
             aria-label={`View ${job.title} at ${job.company.name}`}
           >
@@ -89,7 +89,7 @@ export function JobCard({
         <CompanyLogo company={job.company} />
         <div className="job-card-heading">
           <h3>
-            <Link href={href} className="card-title-link">
+            <Link href={href} prefetch={false} className="card-title-link">
               {job.title}
             </Link>
           </h3>
@@ -133,7 +133,7 @@ export function JobCard({
           </time>
         </div>
         <Link
-          href={href}
+          href={href} prefetch={false}
           className="view-job"
           aria-label={`View ${job.title} at ${job.company.name}`}
         >
