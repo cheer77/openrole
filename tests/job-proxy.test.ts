@@ -36,6 +36,7 @@ test("job status checks preserve active/closed passthrough, missing 404 and expi
   t.mock.method(globalThis, "fetch", async (_url: unknown, init: RequestInit) => {
     assert.equal(init.method, "HEAD");
     assert.equal(init.cache, "no-store");
+    assert.equal(init.redirect, "error");
     return new Response(null, { status });
   });
   const request = new NextRequest("https://jobs.example.test/jobs/example?from=q%3DReact");
@@ -48,6 +49,25 @@ test("job status checks preserve active/closed passthrough, missing 404 and expi
   const expired = await exported.proxy(request);
   assert.equal(expired.status, 410);
   assert.equal(expired.headers.get("x-robots-tag"), "noindex");
-  t.mock.method(globalThis, "fetch", async () => { throw new Error("timeout"); });
-  assert.equal((await exported.proxy(request)).status, 200);
+  assert.equal(expired.headers.get("cache-control"), "no-store");
+  assert.equal(missing.headers.get("cache-control"), "no-store");
+});
+
+test("failed status checks stop at one request and return an uncached retryable 503", async (t) => {
+  let upstream: number | "timeout" = 503;
+  const fetch = t.mock.method(globalThis, "fetch", async () => {
+    if (upstream === "timeout") throw new Error("timeout");
+    return new Response(null, { status: upstream });
+  });
+  for (upstream of [500, 503, 429, 302, 204, "timeout"] as const) {
+    const before = fetch.mock.callCount();
+    const response = await exported.proxy(new NextRequest("https://jobs.example.test/jobs/example"));
+    assert.equal(response.status, 503);
+    assert.equal(response.headers.get("cache-control"), "no-store");
+    assert.equal(response.headers.get("retry-after"), "60");
+    assert.equal(response.headers.get("x-middleware-next"), null);
+    assert.equal(response.headers.get("x-middleware-rewrite"), null);
+    assert.equal(response.headers.get("x-robots-tag"), null);
+    assert.equal(fetch.mock.callCount() - before, 1);
+  }
 });
