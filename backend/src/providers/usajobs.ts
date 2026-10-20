@@ -14,7 +14,7 @@ const descriptor = z.object({
     CountryCode: text.optional(),
     CountrySubDivisionCode: text.optional(),
     CityName: text.optional(),
-  })).optional(),
+  })).max(100).optional(),
   OrganizationName: text,
   QualificationSummary: text.optional(),
   PublicationStartDate: text.optional(),
@@ -82,6 +82,11 @@ export class USAJobsProvider implements JobProvider {
           city: loc?.CityName,
           region: loc?.CountrySubDivisionCode,
           country: loc?.CountryCode,
+          locations: d.PositionLocation?.map((location) => ({
+            city: location.CityName,
+            region: location.CountrySubDivisionCode,
+            country: location.CountryCode,
+          })),
           employmentType: d.PositionSchedule?.map((v) => v.Name).join(", "),
           publishedAt: d.PublicationStartDate,
           salary: remuneration ? {

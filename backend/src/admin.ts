@@ -236,8 +236,14 @@ export class AdminController {
     @Body() input: unknown,
   ) {
     const data = parse(jobSchema, input);
-    return this.withJob(id, async (tx) => {
-      const job = await tx.job.update({ where: { id }, data: { ...data, descriptionHtml: null, manualOverride: true } });
+    return this.withJob(id, async (tx, current) => {
+      const contentChanged = current.descriptionHtml !== null || Object.entries(data).some(
+        ([key, value]) => JSON.stringify(current[key as keyof Job]) !== JSON.stringify(value),
+      );
+      const job = await tx.job.update({ where: { id }, data: {
+        ...data, descriptionHtml: null, manualOverride: true,
+        ...(contentChanged ? { contentUpdatedAt: new Date() } : {}),
+      } });
       await audit(tx, "JOB_EDITED", "job", id);
       return job;
     });
@@ -250,7 +256,7 @@ export class AdminController {
       z.object({ status: z.enum(["ACTIVE", "CLOSED", "HIDDEN"]) }).strict(),
       input,
     );
-    return this.withJob(id, async (tx) => {
+    return this.withJob(id, async (tx, current) => {
       const job = await tx.job.update({
         where: { id },
         data: {
@@ -258,6 +264,7 @@ export class AdminController {
           statusOverride: data.status !== "ACTIVE",
           closedAt: data.status === "CLOSED" ? new Date() : null,
           ...(data.status === "ACTIVE" ? { missingCount: 0, missingSince: null } : {}),
+          ...(current.status !== data.status ? { contentUpdatedAt: new Date() } : {}),
         },
       });
       await audit(tx, "JOB_STATUS_CHANGED", "job", id, { status: data.status });
@@ -392,6 +399,7 @@ export class AdminController {
       const company = await tx.company.create({ data: {
         ...data, websiteDomain: data.website ? websiteDomain(data.website) : null,
         normalizedName: normalizedCompanyName(data.name),
+        contentUpdatedAt: new Date(),
         discoveredFrom: "admin", discoveredAt: new Date(),
         discoveryStatus: data.website || data.careerUrl ? "PENDING" : "REVIEW",
       } });
@@ -415,8 +423,12 @@ export class AdminController {
     return this.db.client.$transaction(async (tx) => {
       const prior = await tx.company.findUniqueOrThrow({ where: { id }, include: { _count: { select: { sources: true } } } });
       const changedSite = prior.website !== data.website || prior.careerUrl !== data.careerUrl;
+      const contentChanged = (Object.keys(data) as Array<keyof typeof data>).some(
+        (key) => prior[key] !== data[key],
+      );
       const company = await tx.company.update({ where: { id }, data: {
         ...data, websiteDomain: data.website ? websiteDomain(data.website) : null,
+        ...(contentChanged ? { contentUpdatedAt: new Date() } : {}),
         ...(data.name ? { normalizedName: normalizedCompanyName(data.name) } : {}),
         ...(changedSite && !prior._count.sources ? {
           discoveryStatus: "PENDING", discoveryAttempts: 0, nextRetryAt: null,

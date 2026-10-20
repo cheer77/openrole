@@ -1,22 +1,26 @@
 import { test, expect } from "@playwright/test";
 
 test("active jobs expose factual structured data and canonical URL", async ({ page, request }) => {
-  await page.goto("/jobs?q=Linear");
-  await page.locator(".view-job").first().click();
-  await expect(page).toHaveURL(/\/jobs\/linear-/);
+  await page.goto("/jobs/typeform-qa-automation-engineer");
   const jobUrl = new URL(page.url());
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", `https://jobs.example.test${jobUrl.pathname}`);
   const jsonLd = JSON.parse(await page.locator('script[type="application/ld+json"]').textContent() ?? "null");
   expect(jsonLd["@type"]).toBe("JobPosting");
   expect(jsonLd.title).toContain("Engineer");
-  expect(jsonLd.hiringOrganization.name).toBe("Linear");
+  expect(jsonLd.hiringOrganization.name).toBe("Typeform");
   expect(jsonLd.url).toBe(`https://jobs.example.test${jobUrl.pathname}`);
+  expect(jsonLd.datePosted).toBeTruthy();
+  expect(jsonLd.jobLocation[0].address.addressCountry).toBe("ES");
   expect(jsonLd.jobLocationType).toBeUndefined();
   const robots = await request.get("/robots.txt");
   expect(await robots.text()).toContain("Sitemap: https://jobs.example.test/sitemap.xml");
-  await page.getByRole("link", { name: "More jobs at Linear" }).click();
-  await expect(page).toHaveURL(/\/companies\/linear$/);
-  await expect(page.locator(".company-profile h1")).toHaveText("Linear");
+  await page.getByRole("link", { name: "More jobs at Typeform" }).click();
+  await expect(page).toHaveURL(/\/companies\/typeform$/);
+  await expect(page.locator(".company-profile h1")).toHaveText("Typeform");
+
+  await page.goto("/jobs/linear-senior-frontend-engineer");
+  await expect(page.locator("h1")).toContainText("Senior Frontend Engineer");
+  await expect(page.locator('script[type="application/ld+json"]')).toHaveCount(0);
 });
 
 test("closed and expired jobs leave index and apply flow", async ({ page, request }) => {
@@ -38,6 +42,7 @@ test("sitemap follows active inventory and thin/filter pages are noindex", async
   expect(index).toContain("companies-1.xml");
   const map = await (await request.get("/sitemaps/jobs-1.xml")).text();
   expect(map).toContain("https://jobs.example.test/jobs/");
+  expect(map).toContain("<lastmod>");
   await page.goto("/categories/ai-ml");
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
   await page.goto("/jobs?q=React");

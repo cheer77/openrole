@@ -27,6 +27,11 @@ export const normalizedJobSchema = z
     city: z.string().nullable(),
     country: z.string().nullable(),
     region: z.string().nullable(),
+    structuredLocations: z.array(z.object({
+      city: z.string().max(500).nullable(),
+      region: z.string().max(500).nullable(),
+      country: z.string().regex(/^[A-Z]{2}$/),
+    })).max(100),
     remoteType: z.enum(["REMOTE", "HYBRID", "ON_SITE", "UNKNOWN"]),
     employmentType: z.string().nullable(),
     employmentKind: z.string().nullable(),
@@ -71,6 +76,11 @@ export type RawJob = {
   city?: string | null;
   country?: string | null;
   region?: string | null;
+  locations?: Array<{
+    city?: string | null;
+    region?: string | null;
+    country?: string | null;
+  }>;
   salary?: {
     min?: number | null;
     max?: number | null;
@@ -199,6 +209,30 @@ export function normalize(raw: RawJob): NormalizedJob {
     Germany: "DE",
     France: "FR",
   };
+  const normalizeCountry = (value: string | null | undefined) => {
+    if (!value) return null;
+    const country = countryMap[value] ?? value.toUpperCase();
+    return /^[A-Z]{2}$/.test(country) ? country : null;
+  };
+  const country = normalizeCountry(raw.country) ?? countryFromLocation(raw.location);
+  const structuredLocations = (raw.locations?.length
+    ? raw.locations
+    : country ? [{ city: raw.city, region: raw.region, country }] : [])
+    .flatMap((location) => {
+      const locationCountry = normalizeCountry(location.country);
+      return locationCountry ? [{
+        city: location.city?.trim() || null,
+        region: location.region?.trim() || null,
+        country: locationCountry,
+      }] : [];
+    })
+    .filter((location, index, all) =>
+      all.findIndex((candidate) =>
+        candidate.city === location.city &&
+        candidate.region === location.region &&
+        candidate.country === location.country,
+      ) === index,
+    );
   return normalizedJobSchema.parse({
     externalId: raw.externalId,
     title,
@@ -208,8 +242,9 @@ export function normalize(raw: RawJob): NormalizedJob {
     category: classifyJob(title, raw.sourceCategories),
     location: raw.location?.trim() || "Not specified",
     city: raw.city || null,
-    country: raw.country ? (countryMap[raw.country] ?? raw.country) : countryFromLocation(raw.location),
+    country,
     region: raw.region || null,
+    structuredLocations,
     remoteType,
     employmentType: raw.employmentType || null,
     employmentKind: classifyEmploymentType(raw.employmentType),

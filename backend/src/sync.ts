@@ -26,6 +26,34 @@ function importedCompanySlug(name: string) {
   return `${base}-${createHash("sha256").update(name.toLowerCase()).digest("hex").slice(0, 12)}`;
 }
 
+const indexedContentFields = [
+  "title", "companyId", "description", "descriptionHtml", "shortDescription",
+  "category", "location", "city", "country", "region", "structuredLocations",
+  "remoteType", "employmentType", "employmentKind", "experienceLevel",
+  "salaryMin", "salaryMax", "currency", "technologies", "sourceUrl", "applyUrl",
+  "publishedAt",
+] as const;
+
+function stableValue(value: unknown): unknown {
+  if (value instanceof Date) return value.toISOString();
+  if (Array.isArray(value)) return value.map(stableValue);
+  if (value && typeof value === "object") return Object.fromEntries(
+    Object.entries(value).sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, item]) => [key, stableValue(item)]),
+  );
+  return value;
+}
+
+/** Compares only fields that can materially change the public job page. */
+export function indexedJobContentChanged(
+  current: Record<string, unknown>,
+  next: Record<string, unknown>,
+) {
+  return indexedContentFields.some((field) =>
+    JSON.stringify(stableValue(current[field])) !== JSON.stringify(stableValue(next[field])),
+  );
+}
+
 export async function syncSource(
   db: PrismaClient,
   sourceId: string,
@@ -62,15 +90,6 @@ export async function syncSource(
           );
         const existing = await tx.job.findMany({
           where: { sourceId },
-          select: {
-            externalId: true,
-            status: true,
-            statusOverride: true,
-            manualOverride: true,
-            publishedAt: true,
-            firstSeenAt: true,
-            closedAt: true,
-          },
         });
         const byId = new Map(existing.map((job) => [job.externalId, job]));
         const expired = await tx.expiredJob.findMany({
@@ -107,6 +126,7 @@ export async function syncSource(
                   name, slug, normalizedName: normalizedCompanyName(name),
                   enabled: true, discoveredFrom: `job:${source.type}`,
                   discoveredAt: now, discoveryStatus: "PENDING",
+                  contentUpdatedAt: now,
                 }, update: {},
               });
               company = { id: record.id, slug: record.slug };
@@ -128,6 +148,10 @@ export async function syncSource(
             closedAt: old?.statusOverride && old.status === "CLOSED" ? old.closedAt : null,
             companyId: company.id,
           };
+          const nextStatus = old?.statusOverride ? old.status : "ACTIVE";
+          const contentChanged = !!old && !old.manualOverride && (
+            indexedJobContentChanged(old, values) || old.status !== nextStatus
+          );
           await tx.job.upsert({
             where: {
               sourceId_externalId: { sourceId, externalId: job.externalId },
@@ -137,12 +161,14 @@ export async function syncSource(
               sourceId,
               slug: priorSlug.get(job.externalId) ?? jobSlug(job.title, sourceId, job.externalId, company.slug, job.city ?? job.country ?? ""),
               firstSeenAt: now,
+              contentUpdatedAt: now,
             },
             update: {
               ...(old?.manualOverride
                 ? { lastCheckedAt: now, lastSeenAt: now, missingSince: null, missingCount: 0, closedAt: values.closedAt }
                 : values),
-              status: old?.statusOverride ? old.status : "ACTIVE",
+              status: nextStatus,
+              ...(contentChanged ? { contentUpdatedAt: now } : {}),
             },
           });
           if (old) updated++;

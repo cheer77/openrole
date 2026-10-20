@@ -22,7 +22,10 @@ test("USAJOBS paginates official results and preserves federal employer and annu
           PositionTitle: "Software Engineer", PositionURI: `https://www.usajobs.gov/job/${page}`,
           ApplyURI: [`https://www.usajobs.gov/job/${page}/apply`],
           PositionLocationDisplay: "Washington, DC",
-          PositionLocation: [{ CityName: "Washington", CountryCode: "United States" }],
+          PositionLocation: [
+            { CityName: "Washington", CountrySubDivisionCode: "DC", CountryCode: "United States" },
+            { CityName: "Ottawa", CountrySubDivisionCode: "ON", CountryCode: "CA" },
+          ],
           OrganizationName: "Department of Example", QualificationSummary: "Build public services",
           PublicationStartDate: "2026-10-01T00:00:00Z",
           PositionRemuneration: [{ MinimumRange: "80000", MaximumRange: "100000", RateIntervalCode: "PA" }],
@@ -34,6 +37,10 @@ test("USAJOBS paginates official results and preserves federal employer and annu
     assert.equal(jobs[0]?.companyName, "Department of Example");
     assert.equal(jobs[0]?.salaryMin, 80000);
     assert.equal(jobs[0]?.country, "US");
+    assert.deepEqual(jobs[0]?.structuredLocations, [
+      { city: "Washington", region: "DC", country: "US" },
+      { city: "Ottawa", region: "ON", country: "CA" },
+    ]);
     assert.deepEqual(jobs[0]?.sourceCategories, ["Information Technology"]);
   } finally {
     if (previous[0] === undefined) delete process.env.USAJOBS_API_KEY;

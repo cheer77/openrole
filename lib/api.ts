@@ -25,6 +25,7 @@ interface ApiJob {
   city?: string | null;
   country?: string | null;
   region?: string | null;
+  structuredLocations?: unknown;
   employmentType?: string | null;
   employmentKind?: string | null;
   closedAt?: string | null;
@@ -95,6 +96,18 @@ export function companyPresentation(company: ApiCompany): Job["company"] {
   };
 }
 function toJob(job: ApiJob): Job {
+  const structuredLocations = Array.isArray(job.structuredLocations)
+    ? job.structuredLocations.flatMap((location) => {
+        if (!location || typeof location !== "object") return [];
+        const item = location as Record<string, unknown>;
+        if (typeof item.country !== "string" || !/^[A-Z]{2}$/.test(item.country)) return [];
+        return [{
+          country: item.country,
+          city: typeof item.city === "string" && item.city ? item.city : null,
+          region: typeof item.region === "string" && item.region ? item.region : null,
+        }];
+      })
+    : [];
   return {
     id: job.id,
     slug: job.slug,
@@ -106,6 +119,7 @@ function toJob(job: ApiJob): Job {
     city: job.city || undefined,
     country: job.country || countryFromLocation(job.location),
     region: job.region ?? null,
+    structuredLocations,
     remoteType: job.remoteType,
     employmentType: job.employmentType ?? null,
     employmentKind: job.employmentKind ?? null,
@@ -183,10 +197,10 @@ export interface SeoSummary {
 }
 export function getSeoSummary() { return request<SeoSummary>("/seo/summary"); }
 export function getSeoJobs(offset: number, limit: number) {
-  return request<{ slug: string; updatedAt: string }[]>(`/seo/jobs?offset=${offset}&limit=${limit}`);
+  return request<{ slug: string; contentUpdatedAt: string | null }[]>(`/seo/jobs?offset=${offset}&limit=${limit}`);
 }
 export function getSeoCompanies(offset: number, limit: number) {
-  return request<{ slug: string; updatedAt: string }[]>(`/seo/companies?offset=${offset}&limit=${limit}`);
+  return request<{ slug: string; contentUpdatedAt: string | null }[]>(`/seo/companies?offset=${offset}&limit=${limit}`);
 }
 export function getCompanies(
   query = new URLSearchParams(),

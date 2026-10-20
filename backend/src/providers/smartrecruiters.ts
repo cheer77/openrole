@@ -112,6 +112,11 @@ export class SmartRecruitersProvider implements JobProvider {
           city: location.city,
           country: location.country?.toUpperCase(),
           region: location.region,
+          locations: location.country ? [{
+            city: location.city,
+            region: location.region,
+            country: location.country,
+          }] : undefined,
           workplace: location.hybrid
             ? "hybrid"
             : location.remote

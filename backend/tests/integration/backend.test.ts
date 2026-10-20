@@ -59,6 +59,12 @@ test("PostgreSQL synchronization and API regression", async (t) => {
         const before = await db.job.findFirstOrThrow({
           where: { sourceId: source.id },
         });
+        assert.equal(before.contentUpdatedAt?.toISOString(), start.toISOString());
+        const unchangedAt = new Date(start.getTime() + 1800000);
+        await syncSource(db, source.id, provider, unchangedAt);
+        const unchanged = await db.job.findFirstOrThrow({ where: { sourceId: source.id } });
+        assert.equal(unchanged.contentUpdatedAt?.toISOString(), start.toISOString());
+        assert.equal(unchanged.lastCheckedAt.toISOString(), unchangedAt.toISOString());
         items = [{ ...original, title: "Senior Frontend Engineer" }];
         await syncSource(
           db,
@@ -70,12 +76,24 @@ test("PostgreSQL synchronization and API regression", async (t) => {
           where: { sourceId: source.id },
         });
         assert.equal(after.slug, before.slug);
+        assert.equal(after.contentUpdatedAt?.toISOString(), new Date(start.getTime() + 3600000).toISOString());
         assert.equal(after.firstSeenAt.toISOString(), start.toISOString());
         assert.equal(after.publishedAt, null);
         assert.equal(after.sortDate.toISOString(), start.toISOString());
         assert.equal(after.lastSeenAt?.toISOString(), new Date(start.getTime() + 3600000).toISOString());
         assert.equal(after.missingCount, 0);
         assert.equal(await db.job.count({ where: { sourceId: source.id } }), 1);
+
+        // Simulate a legacy row migrated without a trustworthy content date.
+        await db.job.update({ where: { id: after.id }, data: { contentUpdatedAt: null } });
+        await syncSource(db, source.id, provider, new Date(start.getTime() + 7200000));
+        assert.equal((await db.job.findUniqueOrThrow({ where: { id: after.id } })).contentUpdatedAt, null);
+        items = [{ ...items[0]!, description: "React TypeScript APIs with updated responsibilities" }];
+        await syncSource(db, source.id, provider, new Date(start.getTime() + 10800000));
+        assert.equal(
+          (await db.job.findUniqueOrThrow({ where: { id: after.id } })).contentUpdatedAt?.toISOString(),
+          new Date(start.getTime() + 10800000).toISOString(),
+        );
       },
     );
 
@@ -451,9 +469,14 @@ test("PostgreSQL synchronization and API regression", async (t) => {
         assert.ok(summary.categories.find((item: { name: string }) => item.name === "Frontend").count >= 5);
         assert.ok(summary.companies >= 1);
         const jobs = await (await fetch(`${base}/seo/jobs?offset=0&limit=5000`)).json();
-        assert.ok(jobs.some((item: { slug: string }) => item.slug === saved[0].slug));
+        const sitemapJob = jobs.find((item: { slug: string }) => item.slug === saved[0].slug);
+        assert.ok(sitemapJob);
+        assert.equal(sitemapJob.contentUpdatedAt, saved[0].contentUpdatedAt?.toISOString());
+        assert.equal("updatedAt" in sitemapJob, false);
         const companies = await (await fetch(`${base}/seo/companies?offset=0&limit=5000`)).json();
-        assert.ok(companies.some((item: { slug: string }) => item.slug === seoCompany.slug));
+        const sitemapCompany = companies.find((item: { slug: string }) => item.slug === seoCompany.slug);
+        assert.ok(sitemapCompany);
+        assert.equal(sitemapCompany.contentUpdatedAt, saved[0].contentUpdatedAt?.toISOString());
         const detail = await (await fetch(`${base}/companies/${seoCompany.slug}`)).json();
         assert.equal(detail.activeJobs, 5);
         const similar = await (await fetch(`${base}/jobs/${saved[0].slug}/similar`)).json();

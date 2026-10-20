@@ -98,6 +98,11 @@ export interface Job {
   city?: string;
   country?: string | null;
   region?: string | null;
+  structuredLocations: Array<{
+    city: string | null;
+    region: string | null;
+    country: string;
+  }>;
   remoteType: "REMOTE" | "HYBRID" | "ON_SITE" | "UNKNOWN";
   employmentType?: string | null;
   workType: WorkType | "Not specified";

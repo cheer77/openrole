@@ -801,6 +801,7 @@ export function getMockJobs(now = Date.now()): Job[] {
             : location === "EU"
               ? "You must be based in an EU member state. The UK is not included in this eligibility region."
               : `You must be based in ${location === "USA" ? "the United States" : location === "UK" ? "the United Kingdom" : location === "Other" ? city : location}. ${workType === "Hybrid" ? "Regular office attendance is required." : workType === "On-site" ? "This role is based in the office." : "This remote role has a geographic restriction."}`;
+      const country = ({ Spain: "ES", Germany: "DE", UK: "GB", USA: "US" } as const)[location as "Spain" | "Germany" | "UK" | "USA"];
       return {
         id: `job-${index + 1}`,
         status: "ACTIVE",
@@ -822,6 +823,8 @@ export function getMockJobs(now = Date.now()): Job[] {
         category,
         location,
         city: city || undefined,
+        country,
+        structuredLocations: country ? [{ city: city || null, region: null, country }] : [],
         workType,
         remoteType: workType === "Remote" ? "REMOTE" : workType === "Hybrid" ? "HYBRID" : "ON_SITE",
         experience,

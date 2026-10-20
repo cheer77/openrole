@@ -56,7 +56,7 @@ export class SeoController {
     if (!parsed.success) throw new BadRequestException("Invalid sitemap page");
     return this.database.client.job.findMany({
       where: { status: "ACTIVE", company: { enabled: true }, source: { enabled: true } },
-      select: { slug: true, updatedAt: true },
+      select: { slug: true, contentUpdatedAt: true },
       orderBy: { id: "asc" },
       skip: parsed.data.offset,
       take: parsed.data.limit,
@@ -68,8 +68,9 @@ export class SeoController {
     const parsed = pageQuery.safeParse(input);
     if (!parsed.success) throw new BadRequestException("Invalid sitemap page");
     const { offset, limit } = parsed.data;
-    return this.database.client.$queryRaw<{ slug: string; updatedAt: Date }[]>`
-      SELECT c.slug, MAX(j."updatedAt") AS "updatedAt"
+    return this.database.client.$queryRaw<{ slug: string; contentUpdatedAt: Date | null }[]>`
+      SELECT c.slug,
+        GREATEST(c."contentUpdatedAt", MAX(j."contentUpdatedAt")) AS "contentUpdatedAt"
       FROM "Company" c JOIN "Job" j ON j."companyId" = c.id
       JOIN "Source" s ON s.id = j."sourceId"
       WHERE c.enabled AND s.enabled AND j.status = 'ACTIVE'

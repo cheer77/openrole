@@ -14,10 +14,16 @@ export async function GET(_request: Request, { params }: Props) {
   const companies = /^companies-([1-9]\d*)\.xml$/.exec(file);
   if (jobs && Number(jobs[1]) <= 2000) {
     const rows = await getSeoJobs((Number(jobs[1]) - 1) * SITEMAP_PAGE_SIZE, SITEMAP_PAGE_SIZE);
-    entries = rows.map((row) => ({ url: canonical(`/jobs/${row.slug}`), lastModified: row.updatedAt }));
+    entries = rows.map((row) => ({
+      url: canonical(`/jobs/${row.slug}`),
+      ...(row.contentUpdatedAt ? { lastModified: row.contentUpdatedAt } : {}),
+    }));
   } else if (companies && Number(companies[1]) <= 2000) {
     const rows = await getSeoCompanies((Number(companies[1]) - 1) * SITEMAP_PAGE_SIZE, SITEMAP_PAGE_SIZE);
-    entries = rows.map((row) => ({ url: canonical(`/companies/${row.slug}`), lastModified: row.updatedAt }));
+    entries = rows.map((row) => ({
+      url: canonical(`/companies/${row.slug}`),
+      ...(row.contentUpdatedAt ? { lastModified: row.contentUpdatedAt } : {}),
+    }));
   } else if (["static.xml", "categories.xml", "technologies.xml", "locations.xml"].includes(file)) {
     const summary = await getSeoSummary();
     const paths = file === "static.xml"

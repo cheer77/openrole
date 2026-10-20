@@ -25,37 +25,51 @@ function safeWebUrl(value: string | null | undefined) {
 
 export function jobPosting(job: Job, url: string) {
   if (job.status !== "ACTIVE") return null;
-  const country = job.country && /^[A-Z]{2}$/.test(job.country) ? job.country : null;
+  const publishedAt = job.publishedAt && new Date(job.publishedAt);
+  const description = job.description.join("\n\n").trim();
+  const organization = job.company.name.trim();
+  const locations = job.structuredLocations.filter((location) => /^[A-Z]{2}$/.test(location.country));
+  if (!publishedAt || Number.isNaN(publishedAt.getTime()) || !job.title.trim() || !description || !organization)
+    return null;
+  if (!locations.length) return null;
   const salary = job.salary;
   const employment = job.employmentType?.toLowerCase();
   const employmentType = employment?.includes("full") ? "FULL_TIME"
     : employment?.includes("part") ? "PART_TIME"
     : employment?.includes("contract") ? "CONTRACTOR"
     : employment?.includes("intern") ? "INTERN" : undefined;
+  const place = (location: (typeof locations)[number]) => ({
+    "@type": "Place",
+    address: {
+      "@type": "PostalAddress",
+      addressCountry: location.country,
+      ...(location.city ? { addressLocality: location.city } : {}),
+      ...(location.region ? { addressRegion: location.region } : {}),
+    },
+  });
+  const uniqueCountries = [...new Set(locations.map((location) => location.country))];
   return {
     "@context": "https://schema.org",
     "@type": "JobPosting",
     title: job.title,
-    description: job.description.join("\n\n"),
+    description,
     url,
     directApply: false,
     hiringOrganization: {
       "@type": "Organization",
-      name: job.company.name,
+      name: organization,
       ...(safeWebUrl(job.company.website) ? { sameAs: safeWebUrl(job.company.website) } : {}),
     },
-    ...(job.publishedAt ? { datePosted: job.publishedAt } : {}),
+    datePosted: job.publishedAt,
     ...(employmentType ? { employmentType } : {}),
-    ...(country && job.remoteType !== "REMOTE" ? {
-      jobLocation: { "@type": "Place", address: {
-        "@type": "PostalAddress", addressCountry: country,
-        ...(job.city ? { addressLocality: job.city } : {}),
-        ...(job.region ? { addressRegion: job.region } : {}),
-      } },
+    ...(job.remoteType !== "REMOTE" ? {
+      jobLocation: locations.map(place),
     } : {}),
-    ...(country && job.remoteType === "REMOTE" ? {
+    ...(job.remoteType === "REMOTE" ? {
       jobLocationType: "TELECOMMUTE",
-      applicantLocationRequirements: { "@type": "Country", name: country },
+      applicantLocationRequirements: uniqueCountries.map((country) => ({
+        "@type": "Country", name: country,
+      })),
     } : {}),
     ...(salary?.currency && (salary.min !== null || salary.max !== null) ? {
       baseSalary: { "@type": "MonetaryAmount", currency: salary.currency,
