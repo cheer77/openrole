@@ -9,21 +9,18 @@ import { getProvider } from "./providers/providers.js";
 import { isTransientProviderError } from "./providers/http.js";
 import { bootstrapDiscovery, discoverCompany } from "./discovery/index.js";
 import { reclassifyJobs } from "./jobs/reclassify.js";
+import { configureVacancySyncScheduler } from "./worker-schedule.js";
 
 async function main() {
   const db = createDb();
   await db.$connect();
   // A hard restart cannot finish the ImportLog row owned by the previous
   // worker process. Reconcile stale rows immediately instead of waiting for
-  // the next hourly scheduler tick.
+  // the next scheduled sync tick.
   await retainData(db);
   const queue = createQueue();
   await queue.setGlobalConcurrency(2);
-  await queue.upsertJobScheduler(
-    "hourly",
-    { every: 3600000 },
-    { name: "all", data: {} },
-  );
+  await configureVacancySyncScheduler(queue);
   await queue.upsertJobScheduler(
     "daily-cleanup",
     { every: 86400000 },
@@ -144,7 +141,7 @@ async function main() {
   process.once("SIGTERM", () => {
     void stop();
   });
-  console.log("Sync worker ready; hourly imports, daily cleanup, discovery and taxonomy maintenance enabled");
+  console.log("Sync worker ready; 12-hour imports, daily cleanup, discovery and taxonomy maintenance enabled");
 }
 void main().catch((error: unknown) => {
   console.error(error);
