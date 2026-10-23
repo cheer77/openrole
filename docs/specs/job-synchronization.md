@@ -12,6 +12,8 @@ Scheduler/manual API → `all` job → atomic global run acquisition → enabled
 ## Reliability and constraints
 Only one QUEUED/RUNNING global run is acquired under a PostgreSQL advisory lock. Source deduplication and advisory locks remain authoritative. A deduplicated or locked source becomes SKIPPED/PARTIAL, never false SUCCESS. Retries update the same source row; final failure closes it. Worker startup and five-minute scheduler reconciliation also interrupt runs older than 24 hours. Redis control operations fail fast; scheduler drift/error persists in PostgreSQL. Disabling automatic sync removes only the repeat scheduler and does not block manual runs or active jobs.
 
+Provider adapters absorb expected publication races without weakening snapshot validation: a posting confirmed removed, inactive or internal may be omitted, while malformed identities, unsafe URLs, incomplete payloads and provider outages fail the snapshot. A changing paginated listing receives bounded in-adapter retries and remains transient for worker retry/initial-source validation.
+
 ## Main components
 `backend/src/worker-schedule.ts`, `sync-runs.ts`, `queue.ts`, `worker.ts`, `sync.ts`, `control-center.ts`, Prisma models/migrations, Admin System UI.
 

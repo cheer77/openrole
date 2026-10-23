@@ -1,6 +1,10 @@
 import { setTimeout as delay } from "node:timers/promises";
 import { z } from "zod";
-import { fetchJson, type FetchJson } from "./http.js";
+import {
+  fetchJson,
+  ProviderSnapshotChangedError,
+  type FetchJson,
+} from "./http.js";
 import { normalize, escapeHtml, sourceBodyHtml, httpUrl, type NormalizedJob } from "./normalize.js";
 import { parseIdentifier } from "./source-config.js";
 import type { JobProvider } from "./providers.js";
@@ -38,6 +42,11 @@ const detailSchema = z.object({
     }),
   }),
 });
+const listSnapshotAttempts = 3;
+
+function postingDisappeared(error: unknown) {
+  return error instanceof Error && /^Provider HTTP (?:404|410)$/.test(error.message);
+}
 
 export class SmartRecruitersProvider implements JobProvider {
   constructor(
@@ -57,40 +66,63 @@ export class SmartRecruitersProvider implements JobProvider {
       await this.pause();
       return this.get(url);
     };
-    const ids: string[] = [];
-    let total: number | undefined;
-    do {
-      const page = pageSchema.parse(
-        await request(`${base}?limit=100&offset=${ids.length}`),
-      );
-      total ??= page.totalFound;
-      if (
-        page.offset !== ids.length ||
-        total !== page.totalFound ||
-        (!page.content.length && ids.length !== total)
-      )
-        throw new Error("Incomplete or changing SmartRecruiters snapshot");
-      ids.push(...page.content.map((item) => item.id));
-      if (ids.length > total || new Set(ids).size !== ids.length)
-        throw new Error("Duplicate or unexpected SmartRecruiters postings");
-    } while (ids.length < total);
+    const fetchIds = async () => {
+      for (let attempt = 1; ; attempt++) {
+        const ids: string[] = [];
+        let total: number | undefined;
+        try {
+          do {
+            const page = pageSchema.parse(
+              await request(`${base}?limit=100&offset=${ids.length}`),
+            );
+            total ??= page.totalFound;
+            if (
+              page.offset !== ids.length ||
+              total !== page.totalFound ||
+              (!page.content.length && ids.length !== total)
+            )
+              throw new ProviderSnapshotChangedError(
+                "Incomplete or changing SmartRecruiters snapshot",
+              );
+            ids.push(...page.content.map((item) => item.id));
+            if (ids.length > total || new Set(ids).size !== ids.length)
+              throw new ProviderSnapshotChangedError(
+                "Duplicate or unexpected SmartRecruiters postings",
+              );
+          } while (ids.length < total);
+          return ids;
+        } catch (error) {
+          if (
+            !(error instanceof ProviderSnapshotChangedError) ||
+            attempt >= listSnapshotAttempts
+          ) throw error;
+        }
+      }
+    };
+    const ids = await fetchIds();
 
     // Sequential requests keep two workers below the provider's 10 requests/s limit.
     // Never follow response `ref` URLs: all requests stay on the fixed API origin.
     const jobs: NormalizedJob[] = [];
     for (const id of ids) {
-      const job = detailSchema.parse(
-        await request(`${base}/${encodeURIComponent(id)}`),
-      );
+      let raw: unknown;
+      try {
+        raw = await request(`${base}/${encodeURIComponent(id)}`);
+      } catch (error) {
+        // A posting may be removed after the list page was read. This is a
+        // terminal state for that posting, not a failure of the whole board.
+        if (postingDisappeared(error)) continue;
+        throw error;
+      }
+      const job = detailSchema.parse(raw);
       if (
         job.id !== id ||
         job.company.identifier.toLowerCase() !== board.toLowerCase()
       )
         throw new Error("SmartRecruiters posting identity mismatch");
-      if (!job.active || job.visibility === "INTERNAL")
-        throw new Error(
-          "SmartRecruiters posting changed during import; retry snapshot",
-        );
+      // The public list can retain a posting after its detail has become
+      // inactive or internal. Detail visibility is authoritative here.
+      if (!job.active || job.visibility === "INTERNAL") continue;
       const location = job.location;
       jobs.push(
         normalize({

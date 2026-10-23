@@ -66,7 +66,6 @@ test("SmartRecruiters rejects incomplete/changing/duplicate snapshots and failed
       ).fetch("example"),
     );
   for (const invalid of [
-    { ...detail("1"), active: false },
     { ...detail("1"), company: { identifier: "other" } },
     { ...detail("1"), applyUrl: "javascript:alert(1)" },
   ]) {
@@ -80,6 +79,68 @@ test("SmartRecruiters rejects incomplete/changing/duplicate snapshots and failed
       ).fetch("example"),
     );
   }
+});
+
+test("SmartRecruiters excludes postings that become inactive or internal during detail loading", async () => {
+  const jobs = await new SmartRecruitersProvider(
+    async (url) => {
+      if (url.includes("?limit"))
+        return {
+          offset: 0,
+          totalFound: 5,
+          content: [
+            { id: "public" },
+            { id: "inactive" },
+            { id: "internal" },
+            { id: "missing" },
+            { id: "removed" },
+          ],
+        };
+      const id = new URL(url).pathname.split("/").pop()!;
+      if (id === "missing") throw new Error("Provider HTTP 404");
+      if (id === "removed") throw new Error("Provider HTTP 410");
+      if (id === "inactive") return { ...detail(id), active: false };
+      if (id === "internal")
+        return { ...detail(id), visibility: "INTERNAL" };
+      return detail(id);
+    },
+    async () => {},
+  ).fetch("example");
+
+  assert.deepEqual(jobs.map((job) => job.externalId), ["public"]);
+});
+
+test("SmartRecruiters retries a changing list before loading details", async () => {
+  let listRequests = 0;
+  const jobs = await new SmartRecruitersProvider(
+    async (url) => {
+      if (url.includes("?limit")) {
+        listRequests++;
+        if (listRequests === 1)
+          return { offset: 1, totalFound: 1, content: [{ id: "1" }] };
+        return { offset: 0, totalFound: 1, content: [{ id: "1" }] };
+      }
+      return detail("1");
+    },
+    async () => {},
+  ).fetch("example");
+
+  assert.equal(listRequests, 2);
+  assert.deepEqual(jobs.map((job) => job.externalId), ["1"]);
+});
+
+test("SmartRecruiters does not hide detail outages as publication changes", async () => {
+  await assert.rejects(
+    new SmartRecruitersProvider(
+      async (url) => {
+        if (url.includes("?limit"))
+          return { offset: 0, totalFound: 1, content: [{ id: "1" }] };
+        throw new Error("Provider HTTP 503");
+      },
+      async () => {},
+    ).fetch("example"),
+    /Provider HTTP 503/,
+  );
 });
 
 const position = `<position><id>123</id><name>Frontend Engineer</name><office>Berlin</office><additionalOffices><office>Munich</office></additionalOffices><jobDescriptions><jobDescription><name>Role</name><value><![CDATA[<p>React &amp; TypeScript</p>]]></value></jobDescription></jobDescriptions><createdAt>2026-01-01</createdAt></position>`;

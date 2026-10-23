@@ -1,9 +1,14 @@
 export type FetchJson = (url: string) => Promise<unknown>;
 export type FetchText = (url: string) => Promise<string>;
 
+export class ProviderSnapshotChangedError extends Error {
+  override readonly name = "ProviderSnapshotChangedError";
+}
+
 export function isTransientProviderError(error: unknown) {
   return error instanceof Error && (
     /^Provider HTTP (?:429|5\d\d)$/.test(error.message) ||
+    error instanceof ProviderSnapshotChangedError ||
     error.name === "TimeoutError" || error.name === "AbortError" ||
     error.message === "fetch failed"
   );

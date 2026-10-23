@@ -4,7 +4,10 @@ import { USAJobsProvider } from "../src/providers/usajobs.js";
 import { ArbeitnowProvider } from "../src/providers/arbeitnow.js";
 import { CanadaJobBankProvider, csvRows } from "../src/providers/canada-job-bank.js";
 import { validSourceIdentifier } from "../src/providers/source-config.js";
-import { isTransientProviderError } from "../src/providers/http.js";
+import {
+  isTransientProviderError,
+  ProviderSnapshotChangedError,
+} from "../src/providers/http.js";
 
 test("USAJOBS paginates official results and preserves federal employer and annual pay", async () => {
   const previous = [process.env.USAJOBS_API_KEY, process.env.USAJOBS_USER_AGENT];
@@ -125,6 +128,10 @@ test("fixed aggregate identifiers reject arbitrary URLs and prefixes", () => {
 test("rate limits and provider outages remain retryable without disabling the source", () => {
   assert.equal(isTransientProviderError(new Error("Provider HTTP 429")), true);
   assert.equal(isTransientProviderError(new Error("Provider HTTP 503")), true);
+  assert.equal(
+    isTransientProviderError(new ProviderSnapshotChangedError("snapshot changed")),
+    true,
+  );
   assert.equal(isTransientProviderError(new Error("Provider HTTP 404")), false);
   assert.equal(isTransientProviderError(new Error("Invalid identifier for this provider")), false);
 });
