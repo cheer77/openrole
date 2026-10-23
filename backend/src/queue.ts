@@ -4,9 +4,9 @@ import type { PrismaClient } from "./generated/prisma/client.js";
 import { dueDiscoveryCompanies } from "./discovery/index.js";
 
 export const queueName = "openrole-sync";
-export function createQueue() {
+export function createQueue(options: { failFast?: boolean } = {}) {
   return new Queue<{ sourceId?: string; companyId?: string; force?: boolean }>(queueName, {
-    connection: redisConnection(),
+    connection: redisConnection(options.failFast),
     defaultJobOptions: {
       attempts: 3,
       backoff: { type: "exponential", delay: 60000 },

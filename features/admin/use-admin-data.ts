@@ -103,6 +103,16 @@ export async function adminMutation(
     ...(method === "DELETE" ? {} : { body: JSON.stringify(body ?? {}) }),
   });
   const data = await response.json();
-  if (!response.ok) throw new Error(data.message || "Unable to save changes");
+  if (!response.ok)
+    throw new AdminMutationError(
+      data.message || "Unable to save changes",
+      response.status,
+    );
   return data;
+}
+
+export class AdminMutationError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+  }
 }

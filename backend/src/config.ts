@@ -13,7 +13,7 @@ export const config = z
   })
   .parse(process.env);
 
-export function redisConnection() {
+export function redisConnection(failFast = false) {
   const url = new URL(config.REDIS_URL);
   if (!["redis:", "rediss:"].includes(url.protocol))
     throw new Error("Invalid Redis protocol");
@@ -24,6 +24,7 @@ export function redisConnection() {
     password: url.password ? decodeURIComponent(url.password) : undefined,
     db: Number(url.pathname.slice(1) || 0),
     ...(url.protocol === "rediss:" ? { tls: {} } : {}),
-    maxRetriesPerRequest: null,
+    maxRetriesPerRequest: failFast ? 1 : null,
+    ...(failFast ? { enableOfflineQueue: false } : {}),
   };
 }

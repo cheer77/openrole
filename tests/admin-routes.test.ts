@@ -7,6 +7,10 @@ test("owner proxy exposes discovery listing and review actions", () => {
   for (const action of ["approve", "reject", "retry", "create-source", "ignore"])
     assert.equal(allowedAdminMutationPath(`discovery/cmid123/${action}`), true);
   assert.equal(allowedAdminMutationPath("login"), true);
+  assert.equal(allowedAdminReadPath("sync"), true);
+  assert.equal(allowedAdminMutationPath("sync"), true);
+  assert.equal(allowedAdminReadPath("sync/extra"), false);
+  assert.equal(allowedAdminMutationPath("sync/extra"), false);
   assert.equal(allowedAdminMutationPath("jobs/bulk-delete"), true);
   assert.equal(allowedAdminMutationPath("jobs/bulk-delete/extra"), false);
   assert.equal(allowedAdminReadPath("discovery/cmid123/approve"), false);

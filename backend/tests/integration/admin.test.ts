@@ -17,6 +17,11 @@ const { syncSource } = await import("../../src/sync.js");
 const { normalize } = await import("../../src/providers/normalize.js");
 const { retainData, analyticsReport } = await import("../../src/analytics.js");
 const { sessionHash } = await import("../../src/admin-auth.js");
+const {
+  reconcileVacancySyncScheduler,
+  StaleVacancySyncRevisionError,
+  updateVacancySyncConfig,
+} = await import("../../src/worker-schedule.js");
 
 test("owner authentication, management, import overrides and private analytics", async (t) => {
   const db = createDb(url),
@@ -83,11 +88,18 @@ test("owner authentication, management, import overrides and private analytics",
           "/admin/companies",
           "/admin/sources",
           "/admin/logs",
+          "/admin/sync",
         ])
           assert.equal((await call(path, "GET", undefined, false)).status, 401);
         assert.equal(
           (await call(`/admin/jobs/${job.id}`, "DELETE", undefined, false))
             .status,
+          401,
+        );
+        assert.equal(
+          (await call("/admin/sync", "PATCH", {
+            enabled: true, intervalHours: 12, revision: 1,
+          }, false)).status,
           401,
         );
         assert.equal((await login("wrong")).status, 401);
@@ -101,6 +113,57 @@ test("owner authentication, management, import overrides and private analytics",
           }),
         );
         assert.equal((await call("/admin/session")).status, 200);
+      },
+    );
+    await t.test(
+      "sync configuration rejects stale revisions and recovers after Redis failure",
+      async () => {
+        const initial = await db.vacancySyncConfig.update({
+          where: { id: "vacancy-sync" },
+          data: {
+            enabled: true,
+            intervalHours: 12,
+            revision: 100,
+            appliedRevision: 100,
+            nextRunAt: new Date(Date.now() + 43_200_000),
+            lastApplyError: null,
+          },
+        });
+        const attempts = await Promise.allSettled([
+          updateVacancySyncConfig(db, { enabled: true, intervalHours: 3, revision: initial.revision }),
+          updateVacancySyncConfig(db, { enabled: true, intervalHours: 6, revision: initial.revision }),
+        ]);
+        assert.equal(attempts.filter((result) => result.status === "fulfilled").length, 1);
+        const rejected = attempts.find((result) => result.status === "rejected");
+        assert.ok(rejected && rejected.status === "rejected");
+        assert.ok(rejected.reason instanceof StaleVacancySyncRevisionError);
+
+        const failed = await reconcileVacancySyncScheduler(db, {
+          async getJobScheduler() { throw new Error("Redis unavailable"); },
+          async upsertJobScheduler() { throw new Error("unexpected"); },
+          async removeJobScheduler() { throw new Error("unexpected"); },
+        } as never);
+        assert.equal(failed.lastApplyError, "Redis unavailable");
+        assert.notEqual(failed.appliedRevision, failed.revision);
+
+        let scheduler: { key: string; name: string; every: number; next: number } | undefined;
+        const recovered = await reconcileVacancySyncScheduler(db, {
+          async getJobScheduler() { return scheduler; },
+          async upsertJobScheduler(id: string, repeat: { every: number; startDate?: number }) {
+            scheduler = { key: id, name: "all", every: repeat.every, next: repeat.startDate! };
+          },
+          async removeJobScheduler() { scheduler = undefined; return true; },
+        } as never);
+        assert.equal(recovered.appliedRevision, recovered.revision);
+        assert.equal(recovered.lastApplyError, null);
+        assert.equal(scheduler?.key, "hourly");
+
+        assert.equal((await call("/admin/sync", "PATCH", {
+          enabled: true, intervalHours: 2, revision: recovered.revision,
+        })).status, 400);
+        assert.equal((await call("/admin/sync", "PATCH", {
+          enabled: true, intervalHours: 12, revision: recovered.revision - 1,
+        })).status, 409);
       },
     );
     await t.test(
@@ -357,7 +420,9 @@ test("owner authentication, management, import overrides and private analytics",
           referrer: undefined,
           utmSource: undefined,
         });
-        const unknown = await (await call("/admin/dashboard?range=7")).json();
+        const unknown = await (
+          await call("/admin/dashboard?range=7&traffic=all")
+        ).json();
         assert.ok(
           unknown.countries.some(
             (c: { country: string | null }) => c.country === null,
@@ -400,7 +465,7 @@ test("owner authentication, management, import overrides and private analytics",
           ],
         });
         try {
-          const week = (await analyticsReport(db, "7", now)).chart;
+          const week = (await analyticsReport(db, "7", now, "all")).chart;
           assert.equal(week.granularity, "day");
           assert.equal(week.series.length, 7);
           assert.equal(week.currentPeriod.metrics.visitors, 3);
@@ -413,7 +478,7 @@ test("owner authentication, management, import overrides and private analytics",
           assert.equal(week.series[5].applyConversion, 100);
           assert.equal(week.series[6].applyConversion, 0);
           assert.equal(week.series[0].applyConversion, null);
-          const today = (await analyticsReport(db, "today", now)).chart;
+          const today = (await analyticsReport(db, "today", now, "all")).chart;
           assert.equal(today.series.length, 24);
           assert.equal(today.granularity, "hour");
           assert.equal(today.series[12].partial, true);
@@ -424,13 +489,13 @@ test("owner authentication, management, import overrides and private analytics",
             "2035-10-06T12:30:00.000Z",
           );
           assert.equal(today.previousPeriod.metrics?.applyConversion, 100);
-          const yesterday = (await analyticsReport(db, "yesterday", now)).chart;
+          const yesterday = (await analyticsReport(db, "yesterday", now, "all")).chart;
           assert.equal(yesterday.series.length, 24);
           assert.ok(yesterday.series.every((p) => !p.future && !p.partial));
-          const month = (await analyticsReport(db, "30", now)).chart;
+          const month = (await analyticsReport(db, "30", now, "all")).chart;
           assert.equal(month.series.length, 30);
           assert.equal(month.granularity, "day");
-          const quarter = (await analyticsReport(db, "90", now)).chart;
+          const quarter = (await analyticsReport(db, "90", now, "all")).chart;
           assert.equal(quarter.series.length, 90);
           assert.equal(quarter.previousPeriod.available, false);
           assert.equal(quarter.previousPeriod.metrics, null);

@@ -253,6 +253,17 @@ model IntegrationSetting {
   updatedAt DateTime @updatedAt
 }
 
+model VacancySyncConfig {
+  id String @id @default("vacancy-sync")
+  enabled Boolean @default(true)
+  intervalHours Int @default(12)
+  revision Int @default(1)
+  appliedRevision Int @default(0)
+  nextRunAt DateTime?
+  lastApplyError String?
+  updatedAt DateTime @updatedAt
+}
+
 model AdminAuditLog {
   id String @id @default(cuid())
   actor String @default("owner")

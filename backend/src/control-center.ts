@@ -1,9 +1,16 @@
-import { BadRequestException, Body, Controller, Get, Inject, Param, Patch, Query, UseGuards } from "@nestjs/common";
+import { BadRequestException, Body, ConflictException, Controller, Get, Inject, Param, Patch, Query, UseGuards } from "@nestjs/common";
 import { z } from "zod";
 import { readFileSync } from "node:fs";
 import { Database } from "./db.js";
 import { OwnerGuard } from "./admin-auth.js";
 import { createQueue } from "./queue.js";
+import {
+  reconcileVacancySyncScheduler,
+  StaleVacancySyncRevisionError,
+  updateVacancySyncConfig,
+  vacancySyncState,
+  vacancySyncUpdateSchema,
+} from "./worker-schedule.js";
 
 export const integrations = {
   ga4: { label: "Google Analytics 4", pattern: /^G-[A-Z0-9]{4,20}$/ },
@@ -90,6 +97,40 @@ export class ControlCenterController {
       sources: { total: sources.reduce((sum, row) => sum + row._count._all, 0), enabled: sources.find((row) => row.enabled)?._count._all || 0 },
       version: apiVersion,
     };
+  }
+
+  @Get("sync")
+  async syncSettings() {
+    const queue = createQueue({ failFast: true });
+    try {
+      return await vacancySyncState(this.db.client, queue);
+    } finally {
+      await queue.close().catch(() => {});
+    }
+  }
+
+  @Patch("sync")
+  async saveSyncSettings(@Body() input: unknown) {
+    const parsed = vacancySyncUpdateSchema.safeParse(input);
+    if (!parsed.success) throw new BadRequestException("Invalid synchronization settings");
+    try {
+      await updateVacancySyncConfig(this.db.client, parsed.data);
+    } catch (error) {
+      if (error instanceof StaleVacancySyncRevisionError)
+        throw new ConflictException({
+          message: error.message,
+          currentRevision: error.currentRevision,
+        });
+      throw error;
+    }
+
+    const queue = createQueue({ failFast: true });
+    try {
+      await reconcileVacancySyncScheduler(this.db.client, queue);
+      return await vacancySyncState(this.db.client, queue);
+    } finally {
+      await queue.close().catch(() => {});
+    }
   }
 
   @Get("integrations")

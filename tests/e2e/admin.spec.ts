@@ -171,6 +171,44 @@ test("owner workspace protects access, manages records and fits mobile", async (
   expect((await page.request.get("/api/admin/dashboard")).status()).toBe(401);
 });
 
+test("system manages automatic synchronization and refreshes stale revisions", async ({ page }) => {
+  let syncRevision = 1;
+  let syncInterval = 12;
+  let syncEnabled = true;
+  let forceConflict = false;
+  await page.route("**/api/admin/sync", async (route) => {
+    if (route.request().method() === "PATCH") {
+      if (forceConflict) {
+        forceConflict = false;
+        syncRevision++;
+        return route.fulfill({ status: 409, json: { message: "Synchronization settings changed in another session" } });
+      }
+      const body = route.request().postDataJSON() as { enabled: boolean; intervalHours: number };
+      syncEnabled = body.enabled;
+      syncInterval = body.intervalHours;
+      syncRevision++;
+    }
+    return route.fulfill({ json: {
+      enabled: syncEnabled, intervalHours: syncInterval, revision: syncRevision,
+      appliedRevision: syncRevision, saved: true, applied: true, lastApplyError: null,
+      scheduler: { status: syncEnabled ? "active" : "disabled", nextRunAt: syncEnabled ? "2026-10-24T12:00:00.000Z" : null, intervalHours: syncEnabled ? syncInterval : null, error: null },
+    } });
+  });
+  await page.goto("/admin");
+  await page.getByLabel("Owner password").fill(password);
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await page.getByRole("navigation", { name: "Admin navigation" }).getByRole("link", { name: "System", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Automatic synchronization" })).toBeVisible();
+  await selectOption(page.getByRole("combobox", { name: "Sync interval" }), "6");
+  await page.getByRole("button", { name: "Save settings" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "scheduler applied" })).toBeVisible();
+  await expect(page.getByText("Every 6 hours", { exact: true })).toBeVisible();
+  forceConflict = true;
+  await page.getByLabel("Automatic synchronization", { exact: true }).uncheck();
+  await page.getByRole("button", { name: "Save settings" }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "another session" })).toBeVisible();
+});
+
 test("analytics tracking respects privacy and never blocks Apply", async ({
   page,
   context,

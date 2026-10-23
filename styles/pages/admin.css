@@ -1214,6 +1214,12 @@ body:has(.owner-login) {
 .admin-version { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; overflow-wrap: anywhere; }
 .admin-integration .admin-field { margin: 15px 0; }
 .admin-integration .admin-field input { width: 100%; }
+.admin-sync-settings form { display: grid; gap: 14px; margin-top: 14px; }
+.admin-sync-settings .admin-field { max-width: 260px; }
+.admin-sync-settings .custom-select { width: 100%; }
+.admin-sync-settings .admin-details { margin-bottom: 0; }
+.admin-sync-settings .admin-form-actions { margin-top: 0; }
+.admin-sync-settings .primary-button:disabled { opacity: .5; cursor: wait; }
 .admin-selected-record { margin: 0 0 16px; color: var(--text-secondary); }
 .admin-selected-record a, .admin-panel a { color: var(--brand); }
 .admin-detail-tabs { display: flex; gap: 5px; overflow-x: auto; margin: 14px 0; border-bottom: 1px solid var(--border); }

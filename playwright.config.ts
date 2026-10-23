@@ -68,7 +68,7 @@ export default defineConfig({
         INTERNAL_API_KEY: "test-internal-key-openrole-012345678901234567890",
         ADMIN_COOKIE_SECURE: "false",
         GEO_PROVIDER: "none",
-        APP_ORIGIN: "https://jobs.example.test",
+        APP_ORIGIN: "http://127.0.0.1:3100",
       },
       command: "npm run start -- --hostname 127.0.0.1 --port 3100",
       url: "http://127.0.0.1:3100/login",

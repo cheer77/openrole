@@ -9,7 +9,10 @@ import { getProvider } from "./providers/providers.js";
 import { isTransientProviderError } from "./providers/http.js";
 import { bootstrapDiscovery, discoverCompany } from "./discovery/index.js";
 import { reclassifyJobs } from "./jobs/reclassify.js";
-import { configureVacancySyncScheduler } from "./worker-schedule.js";
+import {
+  reconcileVacancySyncScheduler,
+  VACANCY_SYNC_RECONCILE_INTERVAL_MS,
+} from "./worker-schedule.js";
 
 async function main() {
   const db = createDb();
@@ -19,8 +22,11 @@ async function main() {
   // the next scheduled sync tick.
   await retainData(db);
   const queue = createQueue();
+  // Control-plane commands must fail instead of lingering after the database
+  // row lock expires; otherwise an old revision could apply after a newer one.
+  const schedulerQueue = createQueue({ failFast: true });
   await queue.setGlobalConcurrency(2);
-  await configureVacancySyncScheduler(queue);
+  const syncConfig = await reconcileVacancySyncScheduler(db, schedulerQueue);
   await queue.upsertJobScheduler(
     "daily-cleanup",
     { every: 86400000 },
@@ -127,11 +133,37 @@ async function main() {
     ),
   );
   worker.on("error", (error) => console.error("Worker error:", error.message));
+  let reconcileTimer: ReturnType<typeof setTimeout> | undefined;
+  let reconciling = false;
   let stopping = false;
+  const scheduleReconciliation = () => {
+    if (stopping) return;
+    reconcileTimer = setTimeout(async () => {
+      if (reconciling) return scheduleReconciliation();
+      reconciling = true;
+      try {
+        const result = await reconcileVacancySyncScheduler(db, schedulerQueue);
+        if (result.lastApplyError)
+          console.error("Vacancy scheduler reconciliation failed:", result.lastApplyError);
+      } catch (error) {
+        console.error(
+          "Vacancy scheduler reconciliation failed:",
+          error instanceof Error ? error.message : error,
+        );
+      } finally {
+        reconciling = false;
+        scheduleReconciliation();
+      }
+    }, VACANCY_SYNC_RECONCILE_INTERVAL_MS);
+    reconcileTimer.unref();
+  };
+  scheduleReconciliation();
   const stop = async () => {
     if (stopping) return;
     stopping = true;
+    clearTimeout(reconcileTimer);
     await worker.close();
+    await schedulerQueue.close();
     await queue.close();
     await db.$disconnect();
   };
@@ -141,7 +173,9 @@ async function main() {
   process.once("SIGTERM", () => {
     void stop();
   });
-  console.log("Sync worker ready; 12-hour imports, daily cleanup, discovery and taxonomy maintenance enabled");
+  console.log(
+    `Sync worker ready; automatic imports ${syncConfig.enabled ? `every ${syncConfig.intervalHours} hours` : "disabled"}, daily cleanup, discovery and taxonomy maintenance enabled`,
+  );
 }
 void main().catch((error: unknown) => {
   console.error(error);
