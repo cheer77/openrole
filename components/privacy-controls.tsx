@@ -1,7 +1,14 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 export function PrivacyControls() {
   const [message, setMessage] = useState("");
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (localStorage.getItem("openrole-analytics-disabled") === "1")
+        setMessage("Analytics is disabled for this browser.");
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
   return (
     <div>
       <button

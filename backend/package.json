@@ -1,6 +1,6 @@
 {
   "name": "vmiyou-api",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -14,7 +14,7 @@
     "sources:import": "node dist/src/cli.js sources",
     "sync": "node dist/src/cli.js sync",
     "test": "npm run build && node --test dist/tests/*.test.js",
-    "test:integration": "npm run build && node --test dist/tests/integration/*.test.js"
+    "test:integration": "npm run build && node --test --test-concurrency=1 dist/tests/integration/*.test.js"
   },
   "dependencies": {
     "@nestjs/common": "12.1.2",

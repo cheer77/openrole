@@ -97,7 +97,7 @@ test("search, URL sharing, empty state and reset", async ({ page }) => {
   await page.goto("/jobs");
   await expect(page.locator(".job-card")).toHaveCount(9);
   await page
-    .getByRole("textbox", { name: "Job title, company, or keyword" })
+    .getByRole("searchbox", { name: "Job title, company, or keyword" })
     .fill("NestJS");
   await page.getByRole("button", { name: "Search jobs", exact: true }).click();
   await expect(page).toHaveURL(/q=NestJS/);
@@ -105,11 +105,11 @@ test("search, URL sharing, empty state and reset", async ({ page }) => {
   await expect(page.locator(".job-card")).toContainText("Buffer");
   await page.reload();
   await expect(
-    page.getByRole("textbox", { name: "Job title, company, or keyword" }),
+    page.getByRole("searchbox", { name: "Job title, company, or keyword" }),
   ).toHaveValue("NestJS");
   await expect(page.locator(".job-card")).toHaveCount(1);
   await page
-    .getByRole("textbox", { name: "Job title, company, or keyword" })
+    .getByRole("searchbox", { name: "Job title, company, or keyword" })
     .fill("nonexistent-role-123");
   await page.getByRole("button", { name: "Search jobs", exact: true }).click();
   await expect(
@@ -446,7 +446,7 @@ test("companies navigation opens a working company search", async ({
     scale: "css",
   });
   await page
-    .getByRole("link", { name: "View jobs at Linear", exact: true })
+    .getByRole("link", { name: /View \d+ open jobs at Linear/ })
     .click();
   await expect(page).toHaveURL(/\/companies\/linear/);
   await expect(page.locator(".job-card")).toHaveCount(3);

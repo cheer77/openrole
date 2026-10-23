@@ -38,6 +38,10 @@ test("owner workspace protects access, manages records and fits mobile", async (
     page.getByRole("combobox", { name: "Analytics date range" }),
     "30",
   );
+  await page
+    .getByRole("navigation", { name: "Admin navigation" })
+    .getByRole("link", { name: "Analytics", exact: true })
+    .click();
   await page.getByRole("button", { name: "Apply clicks", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Traffic & engagement" }),
@@ -111,7 +115,7 @@ test("owner workspace protects access, manages records and fits mobile", async (
     .getByRole("row")
     .filter({ has: page.getByText(sourceName, { exact: true }) });
   await expect(row).toContainText("Disabled");
-  await expect(row.getByRole("button", { name: "Sync now" })).toBeDisabled();
+  await expect(row.getByRole("button", { name: "Sync now" })).toHaveCount(0);
   await row.getByRole("button", { name: "Enable", exact: true }).click();
   await expect(row).toContainText("Enabled");
   await row.getByRole("button", { name: "Sync now" }).click();
@@ -171,11 +175,30 @@ test("owner workspace protects access, manages records and fits mobile", async (
   expect((await page.request.get("/api/admin/dashboard")).status()).toBe(401);
 });
 
-test("system manages automatic synchronization and refreshes stale revisions", async ({ page }) => {
+test("system manages automatic synchronization and refreshes stale revisions", async ({ page, context }) => {
   let syncRevision = 1;
   let syncInterval = 12;
   let syncEnabled = true;
   let forceConflict = false;
+  const run = {
+    id: "cmmanualsync000000000000001", trigger: "MANUAL", status: "SUCCESS",
+    totalSources: 2, completedSources: 2, failedSources: 0,
+    jobsCreated: 1, jobsUpdated: 2, jobsClosed: 0,
+    startedAt: "2026-10-24T10:00:00.000Z", finishedAt: "2026-10-24T10:00:05.000Z",
+    createdAt: "2026-10-24T10:00:00.000Z",
+  } as const;
+  await page.route("**/api/admin/sync/runs?page=1", (route) => route.fulfill({
+    json: { items: [run], total: 1, page: 1, pages: 1 },
+  }));
+  await page.route(`**/api/admin/sync/runs/${run.id}`, (route) => route.fulfill({
+    json: { ...run, sources: [{
+      id: "source-run-1", status: "SUCCESS", jobsFound: 3,
+      jobsCreated: 1, jobsUpdated: 2, jobsClosed: 0, error: null,
+      source: { name: "Test board", type: "ASHBY", company: { name: "Test company" } },
+      importLogs: [{ id: "import-1", status: "SUCCESS", error: null }],
+    }] },
+  }));
+  await page.route("**/api/admin/sync/run", (route) => route.fulfill({ status: 201, json: { ...run, status: "QUEUED", completedSources: 0 } }));
   await page.route("**/api/admin/sync", async (route) => {
     if (route.request().method() === "PATCH") {
       if (forceConflict) {
@@ -192,14 +215,18 @@ test("system manages automatic synchronization and refreshes stale revisions", a
       enabled: syncEnabled, intervalHours: syncInterval, revision: syncRevision,
       appliedRevision: syncRevision, saved: true, applied: true, lastApplyError: null,
       scheduler: { status: syncEnabled ? "active" : "disabled", nextRunAt: syncEnabled ? "2026-10-24T12:00:00.000Z" : null, intervalHours: syncEnabled ? syncInterval : null, error: null },
+      currentRun: null, lastRun: run,
     } });
   });
-  await page.goto("/admin");
-  await page.getByLabel("Owner password").fill(password);
-  await page.getByRole("button", { name: "Sign in", exact: true }).click();
-  await page.getByRole("navigation", { name: "Admin navigation" }).getByRole("link", { name: "System", exact: true }).click();
+  await context.addCookies([{ name: "openrole-owner", value: "a".repeat(64), url: "http://127.0.0.1:3100", httpOnly: true, sameSite: "Strict" }]);
+  await page.goto("/admin/system");
   await expect(page.getByRole("heading", { name: "Automatic synchronization" })).toBeVisible();
-  await selectOption(page.getByRole("combobox", { name: "Sync interval" }), "6");
+  await expect(page.getByRole("button", { name: "Details" })).toBeVisible();
+  const interval = page.getByRole("combobox", { name: "Sync interval" });
+  await interval.click();
+  await interval.press("ArrowUp");
+  await interval.press("Enter");
+  await expect(interval).toHaveAttribute("data-value", "6");
   await page.getByRole("button", { name: "Save settings" }).click();
   await expect(page.getByRole("status").filter({ hasText: "scheduler applied" })).toBeVisible();
   await expect(page.getByText("Every 6 hours", { exact: true })).toBeVisible();
@@ -207,6 +234,15 @@ test("system manages automatic synchronization and refreshes stale revisions", a
   await page.getByLabel("Automatic synchronization", { exact: true }).uncheck();
   await page.getByRole("button", { name: "Save settings" }).click();
   await expect(page.getByRole("alert").filter({ hasText: "another session" })).toBeVisible();
+  const detailsButton = page.getByRole("button", { name: "Details" });
+  await detailsButton.focus();
+  await detailsButton.press("Enter");
+  await expect(page.getByRole("heading", { name: "Run details" })).toBeVisible();
+  await expect(page.getByText("Test company · Test board")).toBeVisible();
+  const runButton = page.getByRole("button", { name: "Run synchronization now" });
+  await runButton.focus();
+  await runButton.press("Enter");
+  await expect(page.getByRole("status").filter({ hasText: "Progress will update" })).toBeVisible();
 });
 
 test("analytics tracking respects privacy and never blocks Apply", async ({
@@ -281,9 +317,8 @@ test("analytics tracking respects privacy and never blocks Apply", async ({
 
 test("dashboard refresh is quiet, pauses when inactive and backs off on errors", async ({
   page,
+  context,
 }) => {
-  await page.clock.install({ time: new Date("2026-10-07T10:00:00Z") });
-  await page.clock.pauseAt(new Date("2026-10-07T10:00:00Z"));
   let requests = 0;
   let fail = false;
   let release: (() => void) | undefined;
@@ -306,15 +341,18 @@ test("dashboard refresh is quiet, pauses when inactive and backs off on errors",
     data.chart.series[0].visitors = requests;
     await route.fulfill({ json: data });
   });
-  await page.goto("/admin/login");
-  await page.getByLabel("Owner password").fill(password);
-  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await context.addCookies([{ name: "openrole-owner", value: "a".repeat(64), url: "http://127.0.0.1:3100", httpOnly: true, sameSite: "Strict" }]);
+  await page.goto("/admin/jobs");
+  await page.clock.install({ time: new Date("2026-10-07T10:00:00Z") });
+  await page.clock.pauseAt(new Date("2026-10-07T10:00:01Z"));
+  await page
+    .getByRole("navigation", { name: "Admin navigation" })
+    .getByRole("link", { name: "Overview", exact: true })
+    .click();
   const value = page.locator(".admin-kpi").first().locator("strong");
   await expect(value).toHaveText("1");
-  const chart = page.getByRole("img", {
-    name: "Traffic and engagement over the selected period",
-  });
-  await chart.evaluate((element) =>
+  const preservedRegion = page.getByRole("region", { name: "Selected period metrics" });
+  await preservedRegion.evaluate((element) =>
     element.setAttribute("data-preserved", "yes"),
   );
   await page.clock.runFor(29999);
@@ -331,7 +369,7 @@ test("dashboard refresh is quiet, pauses when inactive and backs off on errors",
   hold = false;
   release!();
   await expect(value).toHaveText("2");
-  await expect(chart).toHaveAttribute("data-preserved", "yes");
+  await expect(preservedRegion).toHaveAttribute("data-preserved", "yes");
 
   const visibility = async (state: "hidden" | "visible") =>
     page.evaluate((state) => {
@@ -499,7 +537,7 @@ test("traffic chart compares multiple series, conversion and hourly/daily ranges
       sameSite: "Strict",
     },
   ]);
-  await page.goto("/admin");
+  await page.goto("/admin/analytics");
   const chart = page.getByRole("region", {
     name: "Traffic and engagement",
     exact: true,

@@ -2,10 +2,18 @@ import { Queue } from "bullmq";
 import { redisConnection } from "./config.js";
 import type { PrismaClient } from "./generated/prisma/client.js";
 import { dueDiscoveryCompanies } from "./discovery/index.js";
+import { skipDeduplicatedRunSource } from "./sync-runs.js";
 
 export const queueName = "openrole-sync";
+export type SyncJobData = {
+  sourceId?: string;
+  companyId?: string;
+  force?: boolean;
+  runId?: string;
+  syncRunSourceId?: string;
+};
 export function createQueue(options: { failFast?: boolean } = {}) {
-  return new Queue<{ sourceId?: string; companyId?: string; force?: boolean }>(queueName, {
+  return new Queue<SyncJobData>(queueName, {
     connection: redisConnection(options.failFast),
     defaultJobOptions: {
       attempts: 3,
@@ -30,6 +38,7 @@ export async function enqueueSources(
   queue: ReturnType<typeof createQueue>,
   db: PrismaClient,
   sourceId?: string,
+  run?: { id: string; sources: { id: string; sourceId: string }[] },
 ) {
   const sources = await db.source.findMany({
     where: {
@@ -43,10 +52,12 @@ export async function enqueueSources(
   if (sourceId && sources.length === 0)
     throw new Error("Enabled import source not found");
   for (const source of sources) {
-    await queue.add(
+    const runSource = run?.sources.find((item) => item.sourceId === source.id);
+    const job = await queue.add(
       "source",
-      { sourceId: source.id },
+      { sourceId: source.id, runId: run?.id, syncRunSourceId: runSource?.id },
       {
+        ...(run ? { jobId: `sync-source-${run.id}-${source.id}` } : {}),
         deduplication: { id: source.id },
         // A 429 from Arbeitnow should not trigger another full pagination
         // one minute later. Other providers retain the default queue delay.
@@ -55,6 +66,8 @@ export async function enqueueSources(
         } : {}),
       },
     );
+    if (runSource && job.data.syncRunSourceId !== runSource.id)
+      await skipDeduplicatedRunSource(db, runSource.id);
   }
   return sources.length;
 }

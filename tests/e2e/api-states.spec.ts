@@ -9,7 +9,7 @@ test("API failure preserves filters and retry recovers real results", async ({
     page.getByRole("region", { name: "Job results" }).getByRole("alert"),
   ).toContainText("We couldn’t load jobs");
   await expect(
-    page.getByRole("textbox", { name: "Job title, company, or keyword" }),
+    page.getByRole("searchbox", { name: "Job title, company, or keyword" }),
   ).toHaveValue(query);
   await expect(
     page.getByRole("button", { name: "Frontend", exact: true }),
@@ -27,7 +27,7 @@ test("server transitions show skeletons and keep only the latest filter selectio
 }, info) => {
   await page.goto("/jobs");
   await page
-    .getByRole("textbox", { name: "Job title, company, or keyword" })
+    .getByRole("searchbox", { name: "Job title, company, or keyword" })
     .fill(`__test_slow_${info.project.name}`);
   await page.getByRole("button", { name: "Search jobs", exact: true }).click();
   await expect(

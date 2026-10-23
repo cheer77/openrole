@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Select } from "@/components/select";
 import { AdminMutationError, adminMutation, useAdminData } from "@/features/admin/use-admin-data";
@@ -24,6 +24,26 @@ type SyncInfo = {
     intervalHours: number | null;
     error: string | null;
   };
+  currentRun: SyncRun | null;
+  lastRun: SyncRun | null;
+};
+type SyncRun = {
+  id: string; trigger: "AUTO" | "MANUAL";
+  status: "QUEUED" | "RUNNING" | "SUCCESS" | "PARTIAL" | "FAILED" | "INTERRUPTED" | "SKIPPED";
+  totalSources: number; completedSources: number; failedSources: number;
+  jobsCreated: number; jobsUpdated: number; jobsClosed: number;
+  startedAt: string | null; finishedAt: string | null; createdAt: string;
+};
+type SyncRunHistory = { items: SyncRun[]; total: number; page: number; pages: number };
+type SyncRunDetails = SyncRun & {
+  sources: Array<{
+    id: string;
+    status: SyncRun["status"];
+    jobsFound: number; jobsCreated: number; jobsUpdated: number; jobsClosed: number;
+    error: string | null;
+    source: { name: string; type: string; company: { name: string } };
+    importLogs: Array<{ id: string; status: string; error: string | null }>;
+  }>;
 };
 type Integration = { provider: string; label: string; identifier: string; enabled: boolean; status: string };
 type AuditEntry = { id: string; action: string; entityType: string; entityId: string | null; createdAt: string; details: unknown };
@@ -59,8 +79,29 @@ function SyncSettingsCard({ data }: { data: SyncInfo }) {
   const [enabled, setEnabled] = useState(data.enabled);
   const [intervalHours, setIntervalHours] = useState(String(data.intervalHours));
   const [busy, setBusy] = useState(false);
+  const [running, setRunning] = useState(false);
+  const [history, setHistory] = useState<SyncRun[]>([]);
+  const [details, setDetails] = useState<SyncRunDetails | null>(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [failure, setFailure] = useState("");
+  const refreshRuns = useCallback(async () => {
+    const [stateResponse, historyResponse] = await Promise.all([
+      fetch("/api/admin/sync", { cache: "no-store" }),
+      fetch("/api/admin/sync/runs?page=1", { cache: "no-store" }),
+    ]);
+    if (stateResponse.ok) setView(await stateResponse.json() as SyncInfo);
+    if (historyResponse.ok) setHistory(((await historyResponse.json()) as SyncRunHistory).items);
+  }, []);
+  useEffect(() => {
+    const timer = setTimeout(() => void refreshRuns(), 0);
+    return () => clearTimeout(timer);
+  }, [refreshRuns]);
+  useEffect(() => {
+    if (!view.currentRun || !["QUEUED", "RUNNING"].includes(view.currentRun.status)) return;
+    const timer = setTimeout(() => void refreshRuns(), 5000);
+    return () => clearTimeout(timer);
+  }, [refreshRuns, view.currentRun]);
   async function save() {
     setBusy(true);
     setMessage("");
@@ -95,10 +136,52 @@ function SyncSettingsCard({ data }: { data: SyncInfo }) {
     }
   }
 
+  async function runNow() {
+    setRunning(true);
+    setMessage("");
+    setFailure("");
+    try {
+      const run = await adminMutation("sync/run", "POST") as SyncRun;
+      setView((current) => ({ ...current, currentRun: run }));
+      setHistory((items) => [run, ...items.filter((item) => item.id !== run.id)]);
+      setMessage("Synchronization queued. Progress will update automatically.");
+    } catch (error) {
+      setFailure(error instanceof AdminMutationError && error.status === 409
+        ? "A global synchronization is already running. Progress has been refreshed."
+        : error instanceof Error ? error.message : "Could not start synchronization.");
+      await refreshRuns();
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  async function showDetails(runId: string) {
+    if (details?.id === runId) {
+      setDetails(null);
+      return;
+    }
+    setDetailsLoading(true);
+    setFailure("");
+    try {
+      const response = await fetch(`/api/admin/sync/runs/${runId}`, { cache: "no-store" });
+      if (!response.ok) throw new Error(`Could not load synchronization details (${response.status}).`);
+      setDetails(await response.json() as SyncRunDetails);
+    } catch (error) {
+      setFailure(error instanceof Error ? error.message : "Could not load synchronization details.");
+    } finally {
+      setDetailsLoading(false);
+    }
+  }
+
   const schedulerStatus = view.scheduler.status[0]?.toUpperCase() + view.scheduler.status.slice(1);
   const next = view.scheduler.nextRunAt
     ? `${new Date(view.scheduler.nextRunAt).toLocaleString("en-GB", { timeZone: "UTC" })} UTC`
     : "Not scheduled";
+  const current = view.currentRun;
+  const latest = current ?? view.lastRun;
+  const progress = current?.totalSources
+    ? Math.round((current.completedSources / current.totalSources) * 100)
+    : 0;
   return <section className="admin-panel admin-sync-settings">
     <div className="admin-panel-heading"><h2>Automatic synchronization</h2><Status value={schedulerStatus} /></div>
     <p className="admin-muted">Settings are stored in PostgreSQL. Scheduler status reflects the active BullMQ schedule.</p>
@@ -114,8 +197,30 @@ function SyncSettingsCard({ data }: { data: SyncInfo }) {
       {view.scheduler.error && <p className="field-error" role="alert">Scheduler unavailable: {view.scheduler.error}</p>}
       {message && <p className="admin-notice" role="status">{message}</p>}
       {failure && <p className="field-error" role="alert">{failure}</p>}
-      <div className="admin-form-actions"><button className="primary-button" type="submit" disabled={busy}>{busy ? "Saving…" : "Save settings"}</button></div>
+      <div className="admin-form-actions"><button className="primary-button" type="submit" disabled={busy || running}>{busy ? "Saving…" : "Save settings"}</button></div>
     </form>
+    <div className="admin-sync-control">
+      <div className="admin-panel-heading"><h3>Synchronization control</h3><Status value={current ? "Active" : "Idle"} /></div>
+      <button className="admin-button" type="button" disabled={running || Boolean(current)} onClick={() => void runNow()}>{running ? "Queuing…" : "Run synchronization now"}</button>
+      {current && <div className="admin-sync-progress" role="status" aria-label="Synchronization progress">
+        <div><span>{current.completedSources} / {current.totalSources} sources</span><strong>{progress}%</strong></div>
+        <progress max="100" value={progress}>{progress}%</progress>
+        <p>{current.status} · {current.failedSources} failed</p>
+      </div>}
+      {latest && <dl className="admin-details">
+        <div><dt>Last synchronization</dt><dd>{new Date(latest.createdAt).toLocaleString()}</dd></div>
+        <div><dt>Status</dt><dd>{latest.status}</dd></div>
+        <div><dt>New / updated / closed</dt><dd>{latest.jobsCreated} / {latest.jobsUpdated} / {latest.jobsClosed}</dd></div>
+        <div><dt>Duration</dt><dd>{latest.startedAt && latest.finishedAt ? `${Math.max(0, Math.round((new Date(latest.finishedAt).getTime() - new Date(latest.startedAt).getTime()) / 1000))}s` : "—"}</dd></div>
+      </dl>}
+    </div>
+    <div className="admin-sync-history"><h3>History</h3>
+      {history.length === 0 ? <p className="admin-muted">No synchronization runs yet.</p> : <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Date</th><th>Trigger</th><th>Status</th><th>Sources</th><th>New / updated / closed</th><th><span className="sr-only">Actions</span></th></tr></thead><tbody>{history.map((run) => <tr key={run.id}><td>{new Date(run.createdAt).toLocaleString()}</td><td>{run.trigger}</td><td>{run.status}</td><td>{run.completedSources}/{run.totalSources}{run.failedSources ? ` · ${run.failedSources} failed` : ""}</td><td>{run.jobsCreated} / {run.jobsUpdated} / {run.jobsClosed}</td><td><button className="admin-button admin-button-compact" type="button" disabled={detailsLoading} aria-expanded={details?.id === run.id} onClick={() => void showDetails(run.id)}>{details?.id === run.id ? "Hide" : "Details"}</button></td></tr>)}</tbody></table></div>}
+      {details && <div className="admin-sync-run-details"><h4>Run details</h4>
+        <p className="admin-muted">{details.trigger} · {details.status} · {details.completedSources}/{details.totalSources} sources completed</p>
+        {details.sources.length === 0 ? <p>No eligible sources were available.</p> : <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Source</th><th>Status</th><th>Found</th><th>New / updated / closed</th><th>Error</th></tr></thead><tbody>{details.sources.map((item) => <tr key={item.id}><td>{item.source.company.name} · {item.source.name}</td><td>{item.status}</td><td>{item.jobsFound}</td><td>{item.jobsCreated} / {item.jobsUpdated} / {item.jobsClosed}</td><td>{item.error ?? item.importLogs[0]?.error ?? "—"}</td></tr>)}</tbody></table></div>}
+      </div>}
+    </div>
   </section>;
 }
 

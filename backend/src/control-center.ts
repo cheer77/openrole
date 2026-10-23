@@ -1,4 +1,4 @@
-import { BadRequestException, Body, ConflictException, Controller, Get, Inject, Param, Patch, Query, UseGuards } from "@nestjs/common";
+import { BadRequestException, Body, ConflictException, Controller, Get, Inject, NotFoundException, Param, Patch, Post, Query, ServiceUnavailableException, UseGuards } from "@nestjs/common";
 import { z } from "zod";
 import { readFileSync } from "node:fs";
 import { Database } from "./db.js";
@@ -11,6 +11,12 @@ import {
   vacancySyncState,
   vacancySyncUpdateSchema,
 } from "./worker-schedule.js";
+import {
+  createManualSyncRun,
+  syncRunDetails,
+  syncRunHistory,
+  SyncRunAlreadyActiveError,
+} from "./sync-runs.js";
 
 export const integrations = {
   ga4: { label: "Google Analytics 4", pattern: /^G-[A-Z0-9]{4,20}$/ },
@@ -103,10 +109,46 @@ export class ControlCenterController {
   async syncSettings() {
     const queue = createQueue({ failFast: true });
     try {
-      return await vacancySyncState(this.db.client, queue);
+      const [state, currentRun, lastRun] = await Promise.all([
+        vacancySyncState(this.db.client, queue),
+        this.db.client.syncRun.findFirst({ where: { status: { in: ["QUEUED", "RUNNING"] } }, orderBy: { createdAt: "desc" } }),
+        this.db.client.syncRun.findFirst({ where: { status: { notIn: ["QUEUED", "RUNNING"] } }, orderBy: { createdAt: "desc" } }),
+      ]);
+      return { ...state, currentRun, lastRun };
     } finally {
       await queue.close().catch(() => {});
     }
+  }
+
+  @Post("sync/run")
+  async runSyncNow() {
+    const queue = createQueue({ failFast: true });
+    try {
+      return await createManualSyncRun(this.db.client, queue);
+    } catch (error) {
+      if (error instanceof SyncRunAlreadyActiveError)
+        throw new ConflictException({ message: error.message, runId: error.runId });
+      throw new ServiceUnavailableException(
+        error instanceof Error ? error.message : "Could not queue synchronization",
+      );
+    } finally {
+      await queue.close().catch(() => {});
+    }
+  }
+
+  @Get("sync/runs")
+  syncRuns(@Query("page") input: string) {
+    const page = z.coerce.number().int().min(1).max(10000).catch(1).parse(input);
+    return syncRunHistory(this.db.client, page);
+  }
+
+  @Get("sync/runs/:id")
+  async syncRun(@Param("id") input: string) {
+    const id = z.string().cuid().safeParse(input);
+    if (!id.success) throw new BadRequestException("Invalid synchronization run ID");
+    const run = await syncRunDetails(this.db.client, id.data);
+    if (!run) throw new NotFoundException("Synchronization run not found");
+    return run;
   }
 
   @Patch("sync")

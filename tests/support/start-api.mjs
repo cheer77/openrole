@@ -22,6 +22,7 @@ const db = createDb(url);
 // Tests share a dedicated database. Do not run concurrently with backend integration tests.
 await db.analyticsEvent.deleteMany();
 await db.adminSession.deleteMany();
+await db.syncRun.deleteMany();
 // Chart tests reuse a fixture session; authentication is tested separately.
 const { sessionHash } = await import('../../backend/dist/src/admin-auth.js');
 await db.adminSession.create({

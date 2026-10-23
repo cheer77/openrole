@@ -59,8 +59,11 @@ export async function syncSource(
   sourceId: string,
   provider?: JobProvider,
   now = new Date(),
+  syncRunSourceId?: string,
 ) {
-  const log = await db.importLog.create({ data: { sourceId, startedAt: now } });
+  const log = await db.importLog.create({
+    data: { sourceId, startedAt: now, syncRunSourceId },
+  });
   try {
     const result = await db.$transaction(
       async (tx) => {

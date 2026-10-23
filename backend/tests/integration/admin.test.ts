@@ -22,6 +22,15 @@ const {
   StaleVacancySyncRevisionError,
   updateVacancySyncConfig,
 } = await import("../../src/worker-schedule.js");
+const {
+  acquireSyncRun,
+  createManualSyncRun,
+  finalizeSyncRun,
+  finishRunSource,
+  interruptStaleSyncRuns,
+  markRunStarted,
+  SyncRunAlreadyActiveError,
+} = await import("../../src/sync-runs.js");
 
 test("owner authentication, management, import overrides and private analytics", async (t) => {
   const db = createDb(url),
@@ -38,6 +47,7 @@ test("owner authentication, management, import overrides and private analytics",
       enabled: true,
     },
   });
+  await db.syncRun.deleteMany();
   const original = normalize({
     externalId: "one",
     title: "Frontend Developer",
@@ -89,6 +99,7 @@ test("owner authentication, management, import overrides and private analytics",
           "/admin/sources",
           "/admin/logs",
           "/admin/sync",
+          "/admin/sync/runs",
         ])
           assert.equal((await call(path, "GET", undefined, false)).status, 401);
         assert.equal(
@@ -102,6 +113,7 @@ test("owner authentication, management, import overrides and private analytics",
           }, false)).status,
           401,
         );
+        assert.equal((await call("/admin/sync/run", "POST", undefined, false)).status, 401);
         assert.equal((await login("wrong")).status, 401);
         const result = await login();
         assert.equal(result.status, 201);
@@ -113,6 +125,53 @@ test("owner authentication, management, import overrides and private analytics",
           }),
         );
         assert.equal((await call("/admin/session")).status, 200);
+      },
+    );
+    await t.test(
+      "global sync acquisition is atomic and source results finalize the run",
+      async () => {
+        const attempts = await Promise.allSettled([
+          acquireSyncRun(db, "MANUAL"),
+          acquireSyncRun(db, "MANUAL"),
+        ]);
+        const fulfilled = attempts.filter((item) => item.status === "fulfilled");
+        const rejected = attempts.filter((item) => item.status === "rejected");
+        assert.equal(fulfilled.length, 1);
+        assert.equal(rejected.length, 1);
+        assert.ok((rejected[0] as PromiseRejectedResult).reason instanceof SyncRunAlreadyActiveError);
+        const run = (fulfilled[0] as PromiseFulfilledResult<Awaited<ReturnType<typeof acquireSyncRun>>>).value;
+        await markRunStarted(db, run.id);
+        for (const item of run.sources)
+          await finishRunSource(db, item.id, { found: 2, created: 1, updated: 1, closed: 0 });
+        const completed = await finalizeSyncRun(db, run.id);
+        assert.equal(completed.status, "SUCCESS");
+        assert.equal(completed.completedSources, completed.totalSources);
+        assert.equal(completed.jobsCreated, completed.totalSources);
+        assert.equal(await interruptStaleSyncRuns(db), 0);
+      },
+    );
+    await t.test(
+      "manual sync records queue failure and permits a later recovery run",
+      async () => {
+        await assert.rejects(
+          createManualSyncRun(db, {
+            async add() { throw new Error("Redis unavailable"); },
+          } as never),
+          /Redis unavailable/,
+        );
+        const failed = await db.syncRun.findFirstOrThrow({ orderBy: { createdAt: "desc" } });
+        assert.equal(failed.status, "FAILED");
+        assert.equal(failed.completedSources, failed.totalSources);
+        assert.ok(await db.adminAuditLog.findFirst({
+          where: { action: "VACANCY_SYNC_RUN_REQUESTED", entityId: failed.id },
+        }));
+
+        const recovered = await acquireSyncRun(db, "MANUAL");
+        await markRunStarted(db, recovered.id);
+        for (const item of recovered.sources)
+          await finishRunSource(db, item.id, { skipped: true });
+        const completed = await finalizeSyncRun(db, recovered.id);
+        assert.equal(completed.status, "SKIPPED");
       },
     );
     await t.test(
@@ -593,6 +652,7 @@ test("owner authentication, management, import overrides and private analytics",
   } finally {
     await app.close();
     await db.analyticsEvent.deleteMany();
+    await db.syncRun.deleteMany();
     await db.job.deleteMany({ where: { sourceId: source.id } });
     await db.source.delete({ where: { id: source.id } });
     await db.company.delete({ where: { id: company.id } });

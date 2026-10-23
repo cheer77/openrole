@@ -7,7 +7,7 @@ test("home search carries selected values into the working jobs listing", async 
   await page.goto("/");
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
-    "Find work that fits your life.",
+    "All jobs. One search.",
   );
   const search = page.getByRole("search", { name: "Search jobs" });
   await search
@@ -38,13 +38,13 @@ test("home discovery links use real jobs and company routes", async ({
   await page.locator(".home-company-card").first().click();
   await expect(page).toHaveURL(/\/companies\/[a-z0-9-]+$/);
   await expect(page.locator(".company-profile h1")).toBeVisible();
-  await page.getByRole("link", { name: "vmiyou home" }).click();
+  await page.getByRole("banner").getByRole("link", { name: "vmiyou home" }).click();
   await page
     .getByRole("navigation", { name: "Popular searches" })
     .getByRole("link", { name: "Remote" })
     .click();
   await expect(page).toHaveURL(/workType=Remote/);
-  await page.getByRole("link", { name: "vmiyou home" }).click();
+  await page.getByRole("banner").getByRole("link", { name: "vmiyou home" }).click();
   await expect(page).toHaveURL(/\/$/);
   await page.getByRole("link", { name: "All companies" }).click();
   await expect(page).toHaveURL(/\/companies$/);

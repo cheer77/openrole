@@ -1,7 +1,7 @@
 import { retainData } from "./analytics.js";
 import { Worker } from "bullmq";
 import { createDb } from "./db.js";
-import { createQueue, enqueueSources, enqueueCompanyDiscovery, queueName } from "./queue.js";
+import { createQueue, enqueueSources, enqueueCompanyDiscovery, queueName, type SyncJobData } from "./queue.js";
 import { redisConnection } from "./config.js";
 import { syncSource } from "./sync.js";
 import { cleanupClosedJobs } from "./cleanup.js";
@@ -13,6 +13,16 @@ import {
   reconcileVacancySyncScheduler,
   VACANCY_SYNC_RECONCILE_INTERVAL_MS,
 } from "./worker-schedule.js";
+import {
+  acquireSyncRun,
+  failRunSource,
+  finalizeSyncRun,
+  finishRunSource,
+  interruptStaleSyncRuns,
+  markRunSourceStarted,
+  markRunStarted,
+  SyncRunAlreadyActiveError,
+} from "./sync-runs.js";
 
 async function main() {
   const db = createDb();
@@ -21,6 +31,7 @@ async function main() {
   // worker process. Reconcile stale rows immediately instead of waiting for
   // the next scheduled sync tick.
   await retainData(db);
+  await interruptStaleSyncRuns(db);
   const queue = createQueue();
   // Control-plane commands must fail instead of lingering after the database
   // row lock expires; otherwise an old revision could apply after a newer one.
@@ -40,12 +51,37 @@ async function main() {
   );
   await queue.add("reclassify-jobs", {}, { deduplication: { id: "reclassify-jobs" } });
   await queue.add("discover-all", {}, { deduplication: { id: "discover-all" } });
-  const worker = new Worker<{ sourceId?: string; companyId?: string; force?: boolean }>(
+  const worker = new Worker<SyncJobData>(
     queueName,
     async (job) => {
       if (job.name === "all") {
         await retainData(db);
-        return { queued: await enqueueSources(queue, db) };
+        let run;
+        if (job.data.runId) {
+          run = await db.syncRun.findUnique({
+            where: { id: job.data.runId },
+            include: { sources: true },
+          });
+          if (!run) throw new Error("Synchronization run not found");
+        } else {
+          try {
+            run = await acquireSyncRun(db, "AUTO");
+            await job.updateData({ ...job.data, runId: run.id });
+          } catch (error) {
+            if (!(error instanceof SyncRunAlreadyActiveError)) throw error;
+            const resumable = await db.syncRun.findFirst({
+              where: { id: error.runId, trigger: "AUTO", status: "QUEUED", startedAt: null },
+              include: { sources: true },
+            });
+            if (!resumable) return { skipped: true, activeRunId: error.runId };
+            run = resumable;
+            await job.updateData({ ...job.data, runId: run.id });
+          }
+        }
+        await markRunStarted(db, run.id);
+        const queued = await enqueueSources(queue, db, undefined, run);
+        if (run.totalSources === 0) await finalizeSyncRun(db, run.id);
+        return { runId: run.id, queued };
       }
       if (job.name === "cleanup") return cleanupClosedJobs(db);
       if (job.name === "reclassify-jobs") return reclassifyJobs(db);
@@ -82,14 +118,24 @@ async function main() {
       if (job.name !== "source" || !job.data.sourceId)
         throw new Error("Invalid sync job");
       const sourceId = job.data.sourceId;
+      if (job.data.syncRunSourceId)
+        await markRunSourceStarted(db, job.data.syncRunSourceId);
       try {
-        const result = await syncSource(db, sourceId);
+        const result = await syncSource(
+          db,
+          sourceId,
+          undefined,
+          new Date(),
+          job.data.syncRunSourceId,
+        );
         if ("found" in result) {
           await db.company.updateMany({ where: { discoverySourceId: sourceId,
             validationStatus: { in: ["CATALOG", "FAILED"] } },
             data: { discoveryStatus: "ENABLED", validationStatus: "VALID", discoveryError: null } });
           await enqueueCompanyDiscovery(queue, db, sourceId);
         }
+        if (job.data.syncRunSourceId)
+          await finishRunSource(db, job.data.syncRunSourceId, result);
         return result;
       } catch (error) {
         const source = await db.source.findUnique({ where: { id: sourceId }, select: { companyId: true } });
@@ -106,6 +152,14 @@ async function main() {
               discoveryStatus: "REVIEW", validationStatus: "FAILED", discoveryError: reason,
             } });
           }
+        }
+        if (job.data.syncRunSourceId) {
+          const finalAttempt = job.attemptsMade + 1 >= (job.opts.attempts ?? 1);
+          if (finalAttempt) await failRunSource(db, job.data.syncRunSourceId, error);
+          else await db.syncRunSource.updateMany({
+            where: { id: job.data.syncRunSourceId, status: "RUNNING" },
+            data: { status: "QUEUED", error: error instanceof Error ? error.message.slice(0, 1000) : "Retry scheduled" },
+          });
         }
         throw error;
       }
@@ -143,6 +197,7 @@ async function main() {
       reconciling = true;
       try {
         const result = await reconcileVacancySyncScheduler(db, schedulerQueue);
+        await interruptStaleSyncRuns(db);
         if (result.lastApplyError)
           console.error("Vacancy scheduler reconciliation failed:", result.lastApplyError);
       } catch (error) {

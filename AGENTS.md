@@ -1,20 +1,30 @@
-# Правила работы с проектом
+# VmiYou agent guide
 
-## Документация дизайна
+VmiYou is a public vacancy search product with a private owner workspace. The repository root is the Next.js frontend; `backend/` is the NestJS API and BullMQ worker. PostgreSQL is authoritative for product and synchronization state; Redis is queue infrastructure.
 
-При каждом изменении дизайна, UI/UX, стилей, добавлении нового компонента или редизайне существующего обязательно обновляй `styles/README.md` в рамках той же задачи.
+## Work safely
 
-Документ должен описывать актуальное состояние: назначение компонентов и файлов стилей, переменные, правила оформления, адаптивность и порядок подключения. Переписывай устаревшие разделы, добавляй новые сведения и удаляй неактуальные; не ограничивайся записью в журнале изменений.
+- Read [SPEC.md](SPEC.md), then only the relevant file under `docs/specs/`.
+- Preserve existing architecture, source-level BullMQ deduplication, PostgreSQL advisory locks, privacy controls, and owner authorization. Do not create parallel sync pipelines or UI kits.
+- Never deploy, push, run production migrations/syncs, or change Railway/Vercel without explicit authorization. Never place secrets in code, docs, output, or fixtures.
+- Use Prisma migrations for schema changes. Apply them only to an explicit local/test database during development; inspect SQL before deployment.
+- Validate external input with Zod, keep admin routes behind OwnerGuard and the Next BFF allowlist, and audit owner mutations.
+- Preserve user changes in a dirty tree. Use focused commits only when requested; do not rewrite history.
 
-Перед завершением задачи проверь соответствие `styles/README.md` внесённым изменениям.
+## Frontend conventions
 
-## Версия платформы
+- Read the applicable Next.js 16 guide in `node_modules/next/dist/docs/` before changing framework behavior. Prefer Server Components; add `"use client"` only for interaction/browser state.
+- Routes live in `app/`; reusable UI in `components/`; domain UI/state in `features/`; server adapters and pure helpers in `lib/`.
+- Fetch backend data through server-side adapters/BFF. Provide explicit loading, error, empty, saving, conflict, and retry states. Maintain keyboard access, semantic labels, focus behavior, SEO rules, and 280–1440px layouts.
+- Reuse the VmiYou design system and CSS tokens. Any UI/style/component change must update both [styles/README.md](styles/README.md) and [docs/specs/design-system.md](docs/specs/design-system.md).
 
-Единая версия vmiyou хранится в `package.json` и дублируется в `backend/package.json` и обоих lock-файлах. Для каждого завершённого изменения, предназначенного к публикации, оцени повышение по SemVer: PATCH для исправлений без изменения возможностей, MINOR для совместимой новой функциональности, MAJOR для несовместимых изменений стабильного контракта. Пока версия ниже 1.0, несовместимые изменения предварительного контракта отмечай повышением MINOR. Не повышай версию за незавершённую работу; при повышении обнови все четыре файла вместе. `npm run check:version` проверяет совпадение перед frontend build. Версию платформы показывают публичный footer и Admin → System → Release.
+## Quality and maintenance
 
-## Границы текущей фазы
-
-Phase 4 разрешена явной командой пользователя «Начинаем фазу 4». Объём: защищённая панель владельца, управление вакансиями/компаниями/источниками, import logs и privacy-conscious аналитика. Кабинеты работодателей и соискателей, OAuth и будущие фазы не входят.
+- Frontend: `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`; browser-impacting work also runs relevant Playwright projects.
+- Backend: `npm --prefix backend run lint`, `typecheck`, `test`; schema/API/queue work also runs integration tests against a dedicated `*_test` database.
+- The version is identical in both package files and lockfiles. Use SemVer; before 1.0, incompatible preliminary-contract changes are MINOR. Verify with `npm run check:version`.
+- Update only affected specs: API changes → `api.md`; schema → `database.md`; worker/sync → `job-synchronization.md`; UI → frontend/design/admin; deployment or test procedures → their specs and corresponding project Skill.
+- Project workflows are in `.agents/skills/`. Backend-specific constraints are in [backend/AGENTS.md](backend/AGENTS.md).
 
 <!-- BEGIN:nextjs-agent-rules -->
 

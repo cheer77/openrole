@@ -35,6 +35,30 @@ enum RemoteType {
   UNKNOWN
 }
 
+enum SyncRunTrigger {
+  AUTO
+  MANUAL
+}
+
+enum SyncRunStatus {
+  QUEUED
+  RUNNING
+  SUCCESS
+  PARTIAL
+  FAILED
+  INTERRUPTED
+  SKIPPED
+}
+
+enum SyncRunSourceStatus {
+  QUEUED
+  RUNNING
+  SUCCESS
+  FAILED
+  INTERRUPTED
+  SKIPPED
+}
+
 model Company {
   id String @id @default(cuid())
   name String
@@ -84,6 +108,7 @@ model Source {
   updatedAt DateTime @updatedAt
   jobs Job[]
   importLogs ImportLog[]
+  syncRunSources SyncRunSource[]
   deletions DeletedJob[]
   @@unique([type, sourceIdentifier])
 }
@@ -184,8 +209,11 @@ model ImportLog {
   jobsUpdated Int @default(0)
   jobsClosed Int @default(0)
   error String?
+  syncRunSourceId String?
+  syncRunSource SyncRunSource? @relation(fields: [syncRunSourceId], references: [id], onDelete: SetNull)
   @@index([startedAt])
   @@index([sourceId, startedAt])
+  @@index([syncRunSourceId])
 }
 
 model DeletedJob {
@@ -254,7 +282,7 @@ model IntegrationSetting {
 }
 
 model VacancySyncConfig {
-  id String @id @default("vacancy-sync")
+  id String @id
   enabled Boolean @default(true)
   intervalHours Int @default(12)
   revision Int @default(1)
@@ -262,6 +290,47 @@ model VacancySyncConfig {
   nextRunAt DateTime?
   lastApplyError String?
   updatedAt DateTime @updatedAt
+}
+
+model SyncRun {
+  id String @id @default(cuid())
+  trigger SyncRunTrigger
+  status SyncRunStatus @default(QUEUED)
+  totalSources Int @default(0)
+  completedSources Int @default(0)
+  failedSources Int @default(0)
+  jobsCreated Int @default(0)
+  jobsUpdated Int @default(0)
+  jobsClosed Int @default(0)
+  startedAt DateTime?
+  finishedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  sources SyncRunSource[]
+  @@index([createdAt])
+  @@index([status, createdAt])
+}
+
+model SyncRunSource {
+  id String @id @default(cuid())
+  runId String
+  run SyncRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  sourceId String
+  source Source @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+  status SyncRunSourceStatus @default(QUEUED)
+  jobsFound Int @default(0)
+  jobsCreated Int @default(0)
+  jobsUpdated Int @default(0)
+  jobsClosed Int @default(0)
+  error String?
+  startedAt DateTime?
+  finishedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  importLogs ImportLog[]
+  @@unique([runId, sourceId])
+  @@index([runId, status])
+  @@index([sourceId, createdAt])
 }
 
 model AdminAuditLog {

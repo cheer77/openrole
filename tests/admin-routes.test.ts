@@ -9,6 +9,9 @@ test("owner proxy exposes discovery listing and review actions", () => {
   assert.equal(allowedAdminMutationPath("login"), true);
   assert.equal(allowedAdminReadPath("sync"), true);
   assert.equal(allowedAdminMutationPath("sync"), true);
+  assert.equal(allowedAdminMutationPath("sync/run"), true);
+  assert.equal(allowedAdminReadPath("sync/runs"), true);
+  assert.equal(allowedAdminReadPath("sync/runs/cmid123"), true);
   assert.equal(allowedAdminReadPath("sync/extra"), false);
   assert.equal(allowedAdminMutationPath("sync/extra"), false);
   assert.equal(allowedAdminMutationPath("jobs/bulk-delete"), true);

@@ -39,7 +39,7 @@ test("all search fields remain visible and preserve selections through resize an
   await page.goto("/jobs");
   const location = page.getByRole("combobox", { name: "Search location" });
   const work = page.getByRole("combobox", { name: "Search work arrangement" });
-  const search = page.getByRole("textbox", {
+  const search = page.getByRole("searchbox", {
     name: "Job title, company, or keyword",
   });
   await selectOption(location, "Spain");
