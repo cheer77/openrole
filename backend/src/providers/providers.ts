@@ -29,6 +29,7 @@ const greenhouseSchema = z.object({
         absolute_url: httpUrl,
         location: z.object({ name: z.string() }),
         offices: z.array(z.object({ location: z.string().nullish() })).optional(),
+        first_published: z.string().datetime({ offset: true }).nullish(),
         updated_at: z.string().nullish(),
       }),
     )
@@ -76,6 +77,7 @@ export class GreenhouseProvider implements JobProvider {
           companyName: verifiedEmployer ?? boardEmployer,
           sourceUrl: job.absolute_url,
           applyUrl: job.absolute_url,
+          publishedAt: job.first_published,
           sourceUpdatedAt: job.updated_at,
           // updated_at is not a publication date. Do not use it for freshness.
         });
@@ -99,7 +101,9 @@ const leverSchema = z
       categories: z.object({
         location: z.string().optional(),
         commitment: z.string().optional(),
+        allLocations: z.array(z.string()).optional(),
       }),
+      country: z.string().regex(/^[A-Za-z]{2}$/).nullable().optional(),
       workplaceType: z.string().optional(),
       createdAt: z.number().optional(),
       updatedAt: z.number().nullish(),
@@ -129,8 +133,12 @@ export class LeverProvider implements JobProvider {
         ),
       );
       jobs.push(
-        ...page.map((job) =>
-          normalize({
+        ...page.map((job) => {
+          const countries = [...new Set([
+            job.country?.toUpperCase(),
+            ...(job.categories.allLocations ?? []).map(countryFromLocation),
+          ].filter((country): country is string => !!country))];
+          return normalize({
             externalId: job.id,
             title: job.text,
             description: [
@@ -148,15 +156,18 @@ export class LeverProvider implements JobProvider {
               job.additionalPlain ? sourceBodyHtml(job.additionalPlain) : null,
             ].filter(Boolean).join("\n\n"),
             location: job.categories.location,
+            country: job.country,
+            locations: countries.map((country) => ({ country })),
             workplace: job.workplaceType,
             employmentType: job.categories.commitment,
-            publishedAt: job.createdAt,
             sourceUpdatedAt: job.updatedAt,
             sourceUrl: job.hostedUrl,
             applyUrl: job.applyUrl,
             salary: job.salaryRange,
-          }),
-        ),
+            // createdAt is the posting record creation time and can predate
+            // publication while the posting is still a draft.
+          });
+        }),
       );
       if (page.length < 100) return jobs;
     }
@@ -191,6 +202,16 @@ const ashbySchema = z.object({
               .nullish(),
           })
           .nullish(),
+        secondaryLocations: z.array(z.object({
+          location: z.string().optional(),
+          address: z.object({
+            postalAddress: z.object({
+              addressLocality: z.string().nullish(),
+              addressRegion: z.string().nullish(),
+              addressCountry: z.string().nullish(),
+            }).nullish(),
+          }).nullish(),
+        })).optional(),
         compensation: z
           .object({
             summaryComponents: z
@@ -228,6 +249,15 @@ export class AshbyProvider implements JobProvider {
             item.compensationType === "Salary" && item.interval === "1 YEAR",
         );
         const address = job.address?.postalAddress;
+        const locations = [address, ...(job.secondaryLocations ?? [])
+          .map((location) => location.address?.postalAddress)]
+          .filter((location): location is NonNullable<typeof location> => !!location?.addressCountry)
+          .map((location) => ({
+            city: location.addressLocality,
+            region: location.addressRegion,
+            country: location.addressCountry,
+          }));
+        const countries = new Set(locations.map((location) => location.country));
         return normalize({
           externalId:
             job.id ??
@@ -238,13 +268,9 @@ export class AshbyProvider implements JobProvider {
           location: job.location,
           workplace: job.workplaceType ?? (job.isRemote ? "Remote" : undefined),
           city: address?.addressLocality,
-          country: address?.addressCountry,
+          country: address?.addressCountry ?? (countries.size === 1 ? [...countries][0] : undefined),
           region: address?.addressRegion,
-          locations: address?.addressCountry ? [{
-            city: address.addressLocality,
-            region: address.addressRegion,
-            country: address.addressCountry,
-          }] : undefined,
+          locations,
           sourceUrl: job.jobUrl,
           applyUrl: job.applyUrl,
           publishedAt: job.publishedAt,

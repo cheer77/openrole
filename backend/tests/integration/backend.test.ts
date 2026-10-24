@@ -6,6 +6,10 @@ import { normalize } from "../../src/providers/normalize.js";
 import { syncSource } from "../../src/sync.js";
 import { cleanupClosedJobs } from "../../src/cleanup.js";
 import { reclassifyJobs } from "../../src/jobs/reclassify.js";
+import {
+  clearLeverPublishedAt,
+  parseCleanupOptions,
+} from "../../src/jobs/clear-lever-published-at.js";
 
 const testUrl = process.env.TEST_DATABASE_URL;
 if (!testUrl || !new URL(testUrl).pathname.endsWith("_test"))
@@ -96,6 +100,69 @@ test("PostgreSQL synchronization and API regression", async (t) => {
         );
       },
     );
+
+    await t.test("Lever cleanup changes only non-manual Lever dates", async () => {
+      const cleanupCompany = await db.company.create({
+        data: { name: `Cleanup ${uid}`, slug: `cleanup-${uid}` },
+      });
+      const [leverSource, ashbySource] = await Promise.all([
+        db.source.create({ data: {
+          name: "Cleanup Lever", type: "LEVER", sourceIdentifier: `cleanup-${uid}`,
+          companyId: cleanupCompany.id, enabled: true,
+        } }),
+        db.source.create({ data: {
+          name: "Cleanup Ashby", type: "ASHBY", sourceIdentifier: `cleanup-${uid}`,
+          companyId: cleanupCompany.id, enabled: true,
+        } }),
+      ]);
+      const firstSeenAt = new Date("2026-01-02T00:00:00Z");
+      const legacyDate = new Date("2025-01-01T00:00:00Z");
+      const originalContentDate = new Date("2026-01-03T00:00:00Z");
+      const cleanupAt = new Date("2026-01-04T00:00:00Z");
+      const row = (externalId: string, sourceId: string, manualOverride = false) => ({
+        externalId, slug: `${externalId}-${uid}`, title: "Cleanup test role",
+        companyId: cleanupCompany.id, sourceId, description: "A vacancy",
+        shortDescription: "A vacancy", category: "Other", location: "Remote",
+        sourceUrl: `https://example.com/${externalId}`,
+        applyUrl: `https://example.com/${externalId}/apply`,
+        publishedAt: legacyDate, firstSeenAt, lastCheckedAt: firstSeenAt,
+        sortDate: legacyDate, contentUpdatedAt: originalContentDate, manualOverride,
+      });
+      try {
+        await db.job.createMany({ data: [
+          row("lever-imported", leverSource.id),
+          row("lever-manual", leverSource.id, true),
+          row("ashby-imported", ashbySource.id),
+        ] });
+        const preview = await clearLeverPublishedAt(db, parseCleanupOptions([]), cleanupAt);
+        assert.equal(preview.mode, "dry-run");
+        assert.equal(preview.count, 1);
+        assert.equal(preview.manualOverridesExcluded, 1);
+        const result = await clearLeverPublishedAt(db, parseCleanupOptions([
+          "--apply", `--confirm-database=${preview.database}`, `--confirm-count=${preview.count}`,
+        ]), cleanupAt);
+        if (result.mode !== "apply") throw new Error("Cleanup did not apply");
+        assert.equal(result.updated, 1);
+        const jobs = new Map((await db.job.findMany({
+          where: { companyId: cleanupCompany.id },
+        })).map((job) => [job.externalId, job]));
+        assert.equal(jobs.get("lever-imported")?.publishedAt, null);
+        assert.equal(jobs.get("lever-imported")?.sortDate.toISOString(), firstSeenAt.toISOString());
+        assert.equal(jobs.get("lever-imported")?.contentUpdatedAt?.toISOString(), cleanupAt.toISOString());
+        for (const externalId of ["lever-manual", "ashby-imported"]) {
+          assert.equal(jobs.get(externalId)?.publishedAt?.toISOString(), legacyDate.toISOString());
+          assert.equal(jobs.get(externalId)?.sortDate.toISOString(), legacyDate.toISOString());
+          assert.equal(jobs.get(externalId)?.contentUpdatedAt?.toISOString(), originalContentDate.toISOString());
+        }
+      } finally {
+        await db.job.deleteMany({ where: { companyId: cleanupCompany.id } });
+        await db.source.deleteMany({ where: { companyId: cleanupCompany.id } });
+        await db.company.delete({ where: { id: cleanupCompany.id } });
+      }
+      assert.equal(await db.job.count({ where: { sourceId: source.id } }), 1);
+      assert.equal((await db.source.findUniqueOrThrow({ where: { id: source.id } })).enabled, true);
+      assert.equal((await db.company.findUniqueOrThrow({ where: { id: company.id } })).enabled, true);
+    });
 
     await t.test(
       "API searches, filters, pagination and validation",

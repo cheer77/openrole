@@ -119,7 +119,16 @@ const locationCountries: Record<string, string> = {
   france: "FR", italy: "IT", poland: "PL", netherlands: "NL",
   belgium: "BE", austria: "AT", switzerland: "CH",
   "united kingdom": "GB", uk: "GB", "united states": "US", usa: "US",
-  canada: "CA", australia: "AU",
+  canada: "CA", australia: "AU", portugal: "PT", ireland: "IE",
+  sweden: "SE", norway: "NO", denmark: "DK", finland: "FI",
+  brazil: "BR", india: "IN", singapore: "SG", japan: "JP",
+  albania: "AL", argentina: "AR", bosnia: "BA", bulgaria: "BG",
+  chile: "CL", colombia: "CO", croatia: "HR", "czech republic": "CZ",
+  estonia: "EE", greece: "GR", hungary: "HU", latvia: "LV",
+  lithuania: "LT", mexico: "MX", moldova: "MD", montenegro: "ME",
+  philippines: "PH", romania: "RO", "saudi arabia": "SA", serbia: "RS",
+  slovakia: "SK", slovenia: "SI", "united arab emirates": "AE",
+  "south korea": "KR",
   // Distinct administrative regions provide evidence when the source omits
   // the country, as in "Magdeburg, Saxony-Anhalt".
   "saxony-anhalt": "DE", bavaria: "DE", "baden-württemberg": "DE",
@@ -200,18 +209,9 @@ export function normalize(raw: RawJob): NormalizedJob {
     raw.sourceUpdatedAt === undefined || raw.sourceUpdatedAt === null
       ? null
       : new Date(raw.sourceUpdatedAt);
-  const countryMap: Record<string, string> = {
-    USA: "US",
-    "United States": "US",
-    "United Kingdom": "GB",
-    UK: "GB",
-    Spain: "ES",
-    Germany: "DE",
-    France: "FR",
-  };
   const normalizeCountry = (value: string | null | undefined) => {
     if (!value) return null;
-    const country = countryMap[value] ?? value.toUpperCase();
+    const country = locationCountries[value.trim().toLocaleLowerCase()] ?? value.trim().toUpperCase();
     return /^[A-Z]{2}$/.test(country) ? country : null;
   };
   const country = normalizeCountry(raw.country) ?? countryFromLocation(raw.location);

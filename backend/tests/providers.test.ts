@@ -28,6 +28,18 @@ test("normalization cleans HTML, classifies role, preserves unknown geography an
   assert.equal(job.country, null);
   assert.equal(job.description, "Use React, TypeScript & Docker.");
   assert.equal(job.descriptionHtml, raw.description);
+  const sweden = normalize({
+    ...raw,
+    city: "Stockholm",
+    country: "Sweden",
+    locations: [{ city: "Stockholm", region: "Stockholm County", country: "Sweden" }],
+  });
+  assert.equal(sweden.country, "SE");
+  assert.deepEqual(sweden.structuredLocations, [
+    { city: "Stockholm", region: "Stockholm County", country: "SE" },
+  ]);
+  assert.equal(normalize({ ...raw, country: "Czech Republic" }).country, "CZ");
+  assert.equal(normalize({ ...raw, country: "European Union" }).country, null);
   assert.equal(
     plainText("&lt;p&gt;Hello &amp;amp; welcome&lt;/p&gt;"),
     "Hello & welcome",
@@ -107,6 +119,24 @@ test("Greenhouse checks complete response and does not treat updated_at as publi
   );
 });
 
+test("Greenhouse preserves the provider's first publication date", async () => {
+  const jobs = await new GreenhouseProvider(async () => ({
+    jobs: [{
+      id: 11,
+      internal_job_id: 11,
+      title: raw.title,
+      content: raw.description,
+      absolute_url: raw.applyUrl,
+      location: { name: "Madrid, Spain" },
+      first_published: "2026-02-03T10:15:00Z",
+      updated_at: "2026-03-04T12:30:00Z",
+    }],
+    meta: { total: 1 },
+  })).fetch("example");
+  assert.equal(jobs[0]?.publishedAt?.toISOString(), "2026-02-03T10:15:00.000Z");
+  assert.equal(jobs[0]?.sourceUpdatedAt?.toISOString(), "2026-03-04T12:30:00.000Z");
+});
+
 test("Greenhouse uses a verified employer for the opaque HelloFresh alumni board", async () => {
   const jobs = await new GreenhouseProvider(async () => ({
     jobs: [{ id: 8211215, internal_job_id: 1, title: "Senior Production Planner",
@@ -160,13 +190,22 @@ test("Lever retrieves all pages and supports EU instances", async () => {
       descriptionPlain: "Build APIs",
       hostedUrl: raw.sourceUrl,
       applyUrl: raw.applyUrl,
-      categories: { location: "Madrid" },
+      categories: { location: "Madrid", allLocations: ["Madrid, Spain"] },
+      country: index === 0 ? undefined : "ES",
       workplaceType: "hybrid",
+      createdAt: Date.parse("2026-01-01T00:00:00Z"),
     }));
   });
   const jobs = await provider.fetch("eu:example");
   assert.equal(jobs.length, 100);
   assert.equal(jobs[0].remoteType, "HYBRID");
+  assert.equal(jobs[0].publishedAt, null);
+  assert.deepEqual(jobs[0].structuredLocations, [
+    { city: null, region: null, country: "ES" },
+  ]);
+  assert.deepEqual(jobs[1].structuredLocations, [
+    { city: null, region: null, country: "ES" },
+  ]);
   assert.match(urls[1], /api\.lever\.eu.*skip=100/);
 });
 
@@ -216,6 +255,35 @@ test("Ashby ignores unlisted positions and preserves explicit country, date, sal
   assert.equal(jobs[0].country, "ES");
   assert.equal(jobs[0].salaryMax, 90000);
   assert.equal(jobs[0].publishedAt?.toISOString(), "2026-01-01T12:00:00.000Z");
+});
+
+test("Ashby preserves secondary locations when the primary address is missing", async () => {
+  const [job] = await new AshbyProvider(async () => ({
+    jobs: [{
+      id: "secondary-only",
+      title: raw.title,
+      isListed: true,
+      isRemote: true,
+      workplaceType: "Remote",
+      descriptionPlain: "Work from Europe",
+      jobUrl: raw.sourceUrl,
+      applyUrl: raw.applyUrl,
+      publishedAt: "2026-01-01T12:00:00Z",
+      address: null,
+      secondaryLocations: [{
+        location: "Stockholm",
+        address: { postalAddress: {
+          addressLocality: "Stockholm",
+          addressRegion: "Stockholm County",
+          addressCountry: "Sweden",
+        } },
+      }],
+    }],
+  })).fetch("example");
+  assert.equal(job?.country, "SE");
+  assert.deepEqual(job?.structuredLocations, [{
+    city: "Stockholm", region: "Stockholm County", country: "SE",
+  }]);
 });
 
 test("source identifiers cannot change provider host or path", async () => {

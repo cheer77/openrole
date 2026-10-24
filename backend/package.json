@@ -13,6 +13,7 @@
     "db:migrate": "prisma migrate deploy",
     "sources:import": "node dist/src/cli.js sources",
     "sync": "node dist/src/cli.js sync",
+    "maintenance:clear-lever-published-at": "npm run build && node dist/src/jobs/clear-lever-published-at.js",
     "test": "npm run build && node --test dist/tests/*.test.js",
     "test:integration": "npm run build && node --test --test-concurrency=1 dist/tests/integration/*.test.js"
   },

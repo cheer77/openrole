@@ -54,6 +54,17 @@ export function indexedJobContentChanged(
   );
 }
 
+export function publishedAtForSync(
+  sourceType: string,
+  incoming: Date | null,
+  previous: Date | null | undefined,
+) {
+  if (incoming) return incoming;
+  // Lever's public createdAt value was historically imported as publishedAt,
+  // but it is the posting-record creation time and can predate publication.
+  return sourceType === "LEVER" ? null : (previous ?? null);
+}
+
 export async function syncSource(
   db: PrismaClient,
   sourceId: string,
@@ -136,7 +147,11 @@ export async function syncSource(
               companies.set(name, company);
             }
           }
-          const publishedAt = job.publishedAt ?? old?.publishedAt ?? null;
+          const publishedAt = publishedAtForSync(
+            source.type,
+            job.publishedAt,
+            old?.publishedAt,
+          );
           const { companyName, ...jobFields } = job;
           void companyName;
           const values = {
